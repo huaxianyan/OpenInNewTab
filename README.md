@@ -61,6 +61,22 @@ pwsh -File .\scripts\package.ps1 -Force
 
 脚本会检查 Manifest V3、版本号、文件路径、Manifest 引用、ZIP 条目和每个文件的 SHA256。ZIP 使用固定文件顺序和时间戳，相同源码会生成相同哈希。
 
+### 干净 Profile 验收
+
+自动检查发布包能否在全新 Chromium Profile 中启动：
+
+```powershell
+pwsh -File .\scripts\test-clean-package.ps1
+```
+
+启动独立的可见测试 Profile，完成人工权限和真实网站验收：
+
+```powershell
+pwsh -File .\scripts\start-clean-test.ps1 -Reset
+```
+
+脚本优先使用 Google Chrome，本机没有 Chrome 时使用 Microsoft Edge。自动验收允许使用 Edge，但提交 Chrome Web Store 前必须使用当前稳定版 Chrome 按 [`docs/release-checklist.md`](docs/release-checklist.md) 再验收一次。测试 Profile 位于系统临时目录，不读取现有浏览器 Profile。
+
 ## 使用
 
 点击扩展图标后，可以为当前网站选择：
