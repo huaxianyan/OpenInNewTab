@@ -1,0 +1,17 @@
+{
+  "format": "open-in-new-tab-rules",
+  "version": 1,
+  "title": "NGA 论坛链接规则",
+  "description": "在 NGA 论坛区域使用新标签打开链接，排除文本按钮和标题附加区域。",
+  "homepage": "https://github.com/huaxianyan/OpenInNewTab/tree/main/rule-sets",
+  "rules": [
+    {
+      "name": "bbs.nga.cn 的选定链接",
+      "enabled": true,
+      "pagePattern": "https://bbs.nga.cn/*",
+      "linkSelector": ".forumbox a[href]",
+      "excludeSelector": "a.block_txt, .titleadd2 a[href]",
+      "mode": "force"
+    }
+  ]
+}

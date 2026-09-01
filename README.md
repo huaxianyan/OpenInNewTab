@@ -10,7 +10,7 @@
 - 支持动态生成的链接和单页应用页面
 - 兼容浏览器原生中键、右键和组合键操作
 - 使用 Chrome 同步存储保存规则
-- 在 Popup 中启停、切换模式和删除当前网站规则
+- 在 Popup 中启停、切换模式、可视化编辑和删除当前网站规则
 - 导出规则集，导入前预览并逐条选择
 
 ## 安装开发版本
@@ -91,7 +91,7 @@ node --check service-worker.js
 node --test tests/rules.test.js
 ```
 
-`tests/force-mode.html` 和 `tests/picker-exclusion.html` 是真实 DOM 行为页面，可使用 Chromium 浏览器加载验证。
+`tests/force-mode.html`、`tests/picker-exclusion.html` 和 `tests/picker-edit.html` 是真实 DOM 行为页面，可使用 Chromium 浏览器加载验证。
 
 ## 项目结构
 

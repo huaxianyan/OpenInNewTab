@@ -108,6 +108,52 @@
     return `${rule.pagePattern}\n${rule.linkSelector}`;
   }
 
+  function splitSelectorList(selectorList) {
+    const selectors = [];
+    let current = "";
+    let quote = "";
+    let escaped = false;
+    let parentheses = 0;
+    let brackets = 0;
+
+    for (const character of String(selectorList || "")) {
+      if (escaped) {
+        current += character;
+        escaped = false;
+        continue;
+      }
+      if (character === "\\") {
+        current += character;
+        escaped = true;
+        continue;
+      }
+      if (quote) {
+        current += character;
+        if (character === quote) quote = "";
+        continue;
+      }
+      if (character === "\"" || character === "'") {
+        current += character;
+        quote = character;
+        continue;
+      }
+      if (character === "(") parentheses += 1;
+      else if (character === ")") parentheses = Math.max(0, parentheses - 1);
+      else if (character === "[") brackets += 1;
+      else if (character === "]") brackets = Math.max(0, brackets - 1);
+
+      if (character === "," && parentheses === 0 && brackets === 0) {
+        if (current.trim()) selectors.push(current.trim());
+        current = "";
+      } else {
+        current += character;
+      }
+    }
+
+    if (current.trim()) selectors.push(current.trim());
+    return selectors;
+  }
+
   function createRuleSet(rules, metadata = {}) {
     return {
       format: RULE_SET_FORMAT,
@@ -174,6 +220,7 @@
     parseRuleSet,
     permissionPattern,
     ruleIdentity,
+    splitSelectorList,
     validateRule
   });
 })();

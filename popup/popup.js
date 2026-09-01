@@ -56,10 +56,13 @@
         <option value="force">阻止网站接管</option>
       `;
       mode.value = rule.mode;
+      const visualEdit = document.createElement("button");
+      visualEdit.type = "button";
+      visualEdit.textContent = "可视化编辑";
       const remove = document.createElement("button");
       remove.type = "button";
       remove.textContent = "删除";
-      controls.append(mode, remove);
+      controls.append(mode, visualEdit, remove);
       row.append(heading, controls);
       currentRuleList.append(row);
 
@@ -93,6 +96,16 @@
         setMessage("打开方式已更新。", false);
       });
 
+      visualEdit.addEventListener("click", async () => {
+        const action = siteAction("edit-rule", rule);
+        const response = await chrome.runtime.sendMessage({
+          type: "perform-site-action",
+          action
+        });
+        if (response?.performed) window.close();
+        else setMessage("当前页面无法编辑这条规则，请刷新页面后重试。");
+      });
+
       remove.addEventListener("click", async () => {
         if (!confirm(`删除规则「${rule.name}」？`)) return;
         const response = await chrome.runtime.sendMessage({
@@ -112,12 +125,13 @@
     }
   }
 
-  function siteAction(type) {
+  function siteAction(type, rule) {
     return {
       type,
       tabId: currentTab.id,
+      ruleId: rule?.id || null,
       hostname: new URL(currentTab.url).hostname,
-      pagePattern,
+      pagePattern: rule?.pagePattern || pagePattern,
       revokePermissionOnCancel: type === "pick-links" && !permissionPreviouslyGranted,
       createdAt: Date.now()
     };

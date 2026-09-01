@@ -74,9 +74,16 @@ async function activateRules(tabId) {
 }
 
 async function startLinkPicker(action) {
+  let editingRule = null;
+  if (action.ruleId) {
+    const config = await RuleStore.load();
+    editingRule = config.rules.find((rule) => rule.id === action.ruleId) || null;
+    if (!editingRule) throw new Error("Rule not found");
+  }
+
   await chrome.scripting.executeScript({
     target: { tabId: action.tabId },
-    files: ["picker.js"]
+    files: ["rules.js", "picker.js"]
   });
   await chrome.scripting.insertCSS({
     target: { tabId: action.tabId },
@@ -85,7 +92,8 @@ async function startLinkPicker(action) {
   await chrome.tabs.sendMessage(action.tabId, {
     type: "start-link-picker",
     pagePattern: action.pagePattern,
-    revokePermissionOnCancel: action.revokePermissionOnCancel
+    revokePermissionOnCancel: action.revokePermissionOnCancel,
+    editingRule
   });
 }
 
@@ -125,8 +133,9 @@ async function performSiteAction(action) {
     return false;
   }
 
-  if (action.type === "pick-links") await startLinkPicker(action);
-  else if (action.type === "all-links") await saveAllLinksRule(action);
+  if (action.type === "pick-links" || action.type === "edit-rule") {
+    await startLinkPicker(action);
+  } else if (action.type === "all-links") await saveAllLinksRule(action);
   else return false;
   return true;
 }
@@ -199,9 +208,15 @@ async function savePickedRule(message, sender) {
     return { saved: false };
   }
 
+  const config = await RuleStore.load();
+  const editingRule = message.ruleId
+    ? config.rules.find((rule) => rule.id === message.ruleId)
+    : null;
+  if (message.ruleId && !editingRule) return { saved: false };
+
   const candidate = RuleEngine.normalizeRule({
-    id: crypto.randomUUID(),
-    name: `${new URL(sender.tab.url).hostname} 的选定链接`,
+    id: editingRule?.id || crypto.randomUUID(),
+    name: editingRule?.name || `${new URL(sender.tab.url).hostname} 的选定链接`,
     enabled: true,
     pagePattern: message.pagePattern,
     linkSelector: message.linkSelector,
@@ -215,14 +230,15 @@ async function savePickedRule(message, sender) {
     return { saved: false };
   }
 
-  const config = await RuleStore.load();
-  const existing = config.rules.find((rule) => {
+  const existing = editingRule || config.rules.find((rule) => {
     return rule.pagePattern === candidate.pagePattern &&
       rule.linkSelector === candidate.linkSelector;
   });
 
   if (existing) {
     existing.enabled = true;
+    existing.pagePattern = candidate.pagePattern;
+    existing.linkSelector = candidate.linkSelector;
     existing.excludeSelector = candidate.excludeSelector;
     existing.mode = candidate.mode;
   } else {

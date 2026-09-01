@@ -7,6 +7,7 @@
   const HOVER_ATTRIBUTE = "data-open-links-picker-hover";
   const MATCH_ATTRIBUTE = "data-open-links-picker-match";
   const EXCLUDED_ATTRIBUTE = "data-open-links-picker-excluded";
+  const MUTED_EXCLUDED_ATTRIBUTE = "data-open-links-picker-muted-excluded";
   let session;
 
   function stableClasses(element) {
@@ -77,11 +78,13 @@
 
   function clearHighlights() {
     document.querySelectorAll(
-      `[${HOVER_ATTRIBUTE}], [${MATCH_ATTRIBUTE}], [${EXCLUDED_ATTRIBUTE}]`
+      `[${HOVER_ATTRIBUTE}], [${MATCH_ATTRIBUTE}], [${EXCLUDED_ATTRIBUTE}], ` +
+      `[${MUTED_EXCLUDED_ATTRIBUTE}]`
     ).forEach((element) => {
       element.removeAttribute(HOVER_ATTRIBUTE);
       element.removeAttribute(MATCH_ATTRIBUTE);
       element.removeAttribute(EXCLUDED_ATTRIBUTE);
+      element.removeAttribute(MUTED_EXCLUDED_ATTRIBUTE);
     });
   }
 
@@ -100,18 +103,69 @@
     return excluded;
   }
 
+  function renderExclusionList() {
+    session.exclusionList.replaceChildren();
+    session.exclusionArea.hidden = session.exclusions.length === 0;
+
+    session.exclusions.forEach((selector, index) => {
+      const matches = baseElements().filter((element) => element.matches(selector)).length;
+      const item = document.createElement("span");
+      item.className = "exclusion-item";
+      const preview = document.createElement("button");
+      preview.type = "button";
+      preview.className = "exclusion-preview";
+      preview.textContent = `排除 ${index + 1}（${matches}）`;
+      preview.title = selector;
+      preview.classList.toggle("active", session.focusedExclusion === index);
+      preview.addEventListener("click", () => {
+        session.focusedExclusion = session.focusedExclusion === index ? null : index;
+        renderSelection();
+      });
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "exclusion-remove";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", `删除排除 ${index + 1}`);
+      remove.addEventListener("click", () => {
+        session.exclusions.splice(index, 1);
+        session.focusedExclusion = null;
+        renderSelection();
+      });
+      item.append(preview, remove);
+      session.exclusionList.append(item);
+    });
+  }
+
   function renderSelection() {
     clearHighlights();
     const excluded = excludedElements();
     baseElements().forEach((element) => {
-      element.setAttribute(excluded.has(element) ? EXCLUDED_ATTRIBUTE : MATCH_ATTRIBUTE, "");
+      const matchingExclusions = session.exclusions.reduce((indexes, selector, index) => {
+        if (element.matches(selector)) indexes.push(index);
+        return indexes;
+      }, []);
+      if (!matchingExclusions.length) {
+        element.setAttribute(MATCH_ATTRIBUTE, "");
+      } else if (session.focusedExclusion === null || matchingExclusions.includes(session.focusedExclusion)) {
+        element.setAttribute(EXCLUDED_ATTRIBUTE, "");
+      } else {
+        element.setAttribute(MUTED_EXCLUDED_ATTRIBUTE, "");
+      }
     });
+
     const includedCount = baseElements().length - excluded.size;
-    session.count.textContent = excluded.size
-      ? `将打开 ${includedCount} 个链接，已排除 ${excluded.size} 个`
-      : `已选中 ${includedCount} 个类似链接`;
-    session.undo.textContent = "撤销排除";
-    session.undo.hidden = session.exclusions.length === 0;
+    if (session.focusedExclusion !== null) {
+      const focusedCount = baseElements().filter((element) => {
+        return element.matches(session.exclusions[session.focusedExclusion]);
+      }).length;
+      session.count.textContent = `排除 ${session.focusedExclusion + 1} 匹配 ${focusedCount} 个链接`;
+    } else {
+      session.count.textContent = excluded.size
+        ? `将打开 ${includedCount} 个链接，已排除 ${excluded.size} 个`
+        : `已选中 ${includedCount} 个类似链接`;
+    }
+    session.undo.hidden = true;
+    renderExclusionList();
   }
 
   function showCandidate(index) {
@@ -168,6 +222,7 @@
     session.count.textContent = "正在保存规则…";
     chrome.runtime.sendMessage({
       type: "save-picked-rule",
+      ruleId: session.ruleId,
       pagePattern: session.pagePattern,
       linkSelector: candidate.selector,
       excludeSelector: session.exclusions.join(", "),
@@ -189,30 +244,54 @@
     shadow.innerHTML = `
       <style>
         :host { all: initial; }
-        .bar { position: fixed; z-index: 2147483647; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; min-width: 560px; padding: 14px 16px; border-radius: 12px; color: #202124; background: #fff; box-shadow: 0 4px 24px rgb(0 0 0 / 28%); font: 14px/1.4 system-ui, sans-serif; pointer-events: auto; }
-        .count { flex: 1; font-weight: 600; }
-        button, select { padding: 7px 12px; border: 1px solid #dadce0; border-radius: 7px; color: #202124; background: #fff; font: inherit; }
+        .panel { position: fixed; z-index: 2147483647; left: 50%; bottom: 20px; transform: translateX(-50%); width: min(760px, calc(100vw - 32px)); padding: 12px; border-radius: 12px; color: #202124; background: #fff; box-shadow: 0 4px 24px rgb(0 0 0 / 28%); font: 14px/1.4 system-ui, sans-serif; pointer-events: auto; }
+        .summary { display: flex; align-items: center; gap: 12px; min-height: 34px; }
+        .count { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .actions { display: flex; gap: 8px; margin-top: 9px; overflow-x: auto; scrollbar-width: thin; }
+        button, select { flex: 0 0 auto; padding: 6px 10px; border: 1px solid #dadce0; border-radius: 7px; color: #202124; background: #fff; font: inherit; white-space: nowrap; }
         button { cursor: pointer; }
         button:hover { background: #f1f3f4; }
         .mode { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; }
         button:disabled { opacity: .45; cursor: default; }
         .save { border-color: #0b57d0; color: #fff; background: #0b57d0; }
         .save:hover { background: #0842a0; }
+        .exclusion-area { display: flex; align-items: center; gap: 7px; min-height: 28px; margin-top: 8px; overflow-x: auto; }
+        .exclusion-label { flex: 0 0 auto; color: #5f6368; font-size: 12px; }
+        .exclusion-list { display: flex; gap: 6px; }
+        .exclusion-item { display: inline-flex; }
+        .exclusion-preview { border-radius: 999px 0 0 999px; color: #a50e0e; background: #fce8e6; }
+        .exclusion-preview.active { color: #fff; background: #d93025; border-color: #d93025; }
+        .exclusion-remove { border-left: 0; border-radius: 0 999px 999px 0; color: #a50e0e; background: #fce8e6; }
+        @media (max-width: 520px) {
+          .panel { bottom: 8px; width: calc(100vw - 16px); }
+          .summary { align-items: stretch; flex-direction: column; gap: 6px; }
+          .count { width: 100%; }
+          .mode { width: 100%; justify-content: space-between; }
+          .mode select { flex: 1; }
+        }
       </style>
-      <div class="bar">
-        <span class="count">点击一个需要新标签打开的链接</span>
-        <label class="mode" hidden>打开方式
-          <select>
-            <option value="compatible">保留网站交互</option>
-            <option value="force">阻止网站接管</option>
-          </select>
-        </label>
-        <button class="narrow" type="button" hidden>缩小范围</button>
-        <button class="expand" type="button" hidden>扩大范围</button>
-        <button class="exclude" type="button" hidden>排除链接</button>
-        <button class="undo" type="button" hidden>撤销排除</button>
-        <button class="save" type="button" hidden>保存</button>
-        <button class="cancel" type="button">取消</button>
+      <div class="panel">
+        <div class="summary">
+          <span class="count">点击一个需要新标签打开的链接</span>
+          <label class="mode" hidden>打开方式
+            <select>
+              <option value="compatible">保留网站交互</option>
+              <option value="force">阻止网站接管</option>
+            </select>
+          </label>
+        </div>
+        <div class="exclusion-area" hidden>
+          <span class="exclusion-label">排除项</span>
+          <span class="exclusion-list"></span>
+        </div>
+        <div class="actions">
+          <button class="narrow" type="button" hidden>缩小范围</button>
+          <button class="expand" type="button" hidden>扩大范围</button>
+          <button class="exclude" type="button" hidden>排除链接</button>
+          <button class="undo" type="button" hidden>重新选择</button>
+          <button class="save" type="button" hidden>保存</button>
+          <button class="cancel" type="button">取消</button>
+        </div>
       </div>
     `;
     document.documentElement.append(host);
@@ -222,6 +301,8 @@
       count: shadow.querySelector(".count"),
       modeControl: shadow.querySelector(".mode"),
       modeSelect: shadow.querySelector(".mode select"),
+      exclusionArea: shadow.querySelector(".exclusion-area"),
+      exclusionList: shadow.querySelector(".exclusion-list"),
       narrow: shadow.querySelector(".narrow"),
       expand: shadow.querySelector(".expand"),
       exclude: shadow.querySelector(".exclude"),
@@ -283,6 +364,7 @@
       if (!session.exclusions.includes(candidate.selector)) {
         session.exclusions.push(candidate.selector);
       }
+      session.focusedExclusion = null;
     }
     returnToSelection();
   }
@@ -351,7 +433,45 @@
     if (event.key === "Escape") cancelPicker();
   }
 
-  function startPicker(pagePattern, revokePermissionOnCancel) {
+  function showSelectionControls() {
+    session.modeControl.hidden = false;
+    session.narrow.hidden = false;
+    session.expand.hidden = false;
+    session.exclude.hidden = false;
+    session.save.hidden = false;
+  }
+
+  function restoreRule(rule) {
+    session.modeSelect.value = rule.mode;
+    session.exclusions = RuleEngine.splitSelectorList(rule.excludeSelector);
+
+    let exactElements;
+    try {
+      exactElements = [...document.querySelectorAll(rule.linkSelector)].filter((element) => {
+        return element instanceof HTMLAnchorElement && element.href;
+      });
+    } catch {
+      exactElements = [];
+    }
+
+    if (!exactElements.length) {
+      session.count.textContent = "当前页面没有匹配链接，请点击一个链接重新选择范围";
+      return;
+    }
+
+    const candidates = candidateSelectors(exactElements[0]);
+    if (!candidates.some((candidate) => candidate.selector === rule.linkSelector)) {
+      candidates.push({ selector: rule.linkSelector, elements: exactElements });
+    }
+    candidates.sort((left, right) => left.elements.length - right.elements.length);
+    session.candidates = candidates;
+    session.index = candidates.findIndex((candidate) => candidate.selector === rule.linkSelector);
+    session.mode = "selection";
+    showSelectionControls();
+    showCandidate(session.index);
+  }
+
+  function startPicker(pagePattern, revokePermissionOnCancel, editingRule) {
     if (session) stopPicker();
     const overlay = document.createElement("div");
     overlay.id = "open-links-picker-overlay";
@@ -363,8 +483,10 @@
       overlay,
       pagePattern,
       revokePermissionOnCancel,
+      ruleId: editingRule?.id || null,
       candidates: null,
       exclusions: [],
+      focusedExclusion: null,
       exclusionCandidates: null,
       hoveredAnchor: null,
       mode: "picking-base",
@@ -392,11 +514,17 @@
     overlay.addEventListener("pointermove", handlePointerMove);
     overlay.addEventListener("click", handleOverlayClick);
     document.addEventListener("keydown", handleKeyDown, true);
+
+    if (editingRule) restoreRule(editingRule);
   }
 
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "start-link-picker") {
-      startPicker(message.pagePattern, message.revokePermissionOnCancel);
+      startPicker(
+        message.pagePattern,
+        message.revokePermissionOnCancel,
+        message.editingRule
+      );
     }
   });
 })();

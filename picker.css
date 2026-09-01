@@ -29,3 +29,9 @@
   outline-offset: 2px !important;
   background-color: rgb(217 48 37 / 12%) !important;
 }
+
+[data-open-links-picker-muted-excluded] {
+  outline: 2px dashed #9aa0a6 !important;
+  outline-offset: 2px !important;
+  background-color: rgb(154 160 166 / 8%) !important;
+}

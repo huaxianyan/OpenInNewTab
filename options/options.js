@@ -95,18 +95,51 @@
       actions.className = "rule-actions";
       const edit = document.createElement("button");
       edit.type = "button";
-      edit.textContent = "编辑";
+      edit.textContent = "详细编辑";
       edit.addEventListener("click", () => openDialog(rule));
+      const visualEdit = document.createElement("button");
+      visualEdit.type = "button";
+      visualEdit.textContent = "可视化编辑";
+      visualEdit.addEventListener("click", () => openVisualEditor(rule));
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "danger";
       remove.textContent = "删除";
       remove.addEventListener("click", () => deleteRule(rule));
-      actions.append(edit, remove);
+      actions.append(edit, visualEdit, remove);
 
       card.append(toggle, detail, actions);
       list.append(card);
     }
+  }
+
+  async function openVisualEditor(rule) {
+    const tabs = await chrome.tabs.query({});
+    const target = tabs.find((tab) => {
+      return tab.url && RuleEngine.matchesPage(rule.pagePattern, tab.url);
+    });
+    if (!target) {
+      setStatus("请先打开这条规则适用的网站，再使用可视化编辑。");
+      return;
+    }
+
+    const response = await chrome.runtime.sendMessage({
+      type: "perform-site-action",
+      action: {
+        type: "edit-rule",
+        tabId: target.id,
+        ruleId: rule.id,
+        pagePattern: rule.pagePattern,
+        createdAt: Date.now()
+      }
+    });
+    if (!response?.performed) {
+      setStatus("无法在目标页面打开可视化编辑，请刷新页面后重试。");
+      return;
+    }
+
+    await chrome.tabs.update(target.id, { active: true });
+    await chrome.windows.update(target.windowId, { focused: true });
   }
 
   async function deleteRule(rule) {

@@ -76,6 +76,13 @@ test("导出的规则集可以预览并重新导入", () => {
   });
 });
 
+test("排除选择器列表不会拆开括号和属性中的逗号", () => {
+  assert.deepEqual(
+    RuleEngine.splitSelectorList("a.pagination, :is(a.author, a.avatar), a[data-name='a,b']"),
+    ["a.pagination", ":is(a.author, a.avatar)", "a[data-name='a,b']"]
+  );
+});
+
 test("不支持的规则集版本不会进入导入预览", () => {
   const parsed = RuleEngine.parseRuleSet({
     format: "open-in-new-tab-rules",

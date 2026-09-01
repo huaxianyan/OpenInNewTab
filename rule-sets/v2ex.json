@@ -1,0 +1,17 @@
+{
+  "format": "open-in-new-tab-rules",
+  "version": 1,
+  "title": "V2EX 主题链接规则",
+  "description": "在 V2EX 中使用新标签打开主题链接。",
+  "homepage": "https://github.com/huaxianyan/OpenInNewTab/tree/main/rule-sets",
+  "rules": [
+    {
+      "name": "www.v2ex.com 的选定链接",
+      "enabled": true,
+      "pagePattern": "https://www.v2ex.com/*",
+      "linkSelector": "a[href^=\"/t/\"]",
+      "excludeSelector": "",
+      "mode": "compatible"
+    }
+  ]
+}

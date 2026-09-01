@@ -1,0 +1,17 @@
+{
+  "format": "open-in-new-tab-rules",
+  "version": 1,
+  "title": "PSNINE 新标签规则",
+  "description": "在 PSNINE 中打开链接时排除页头和标签云区域。",
+  "homepage": "https://github.com/huaxianyan/OpenInNewTab/tree/main/rule-sets",
+  "rules": [
+    {
+      "name": "psnine.com 的选定链接",
+      "enabled": true,
+      "pagePattern": "https://psnine.com/*",
+      "linkSelector": "a[href]",
+      "excludeSelector": ".header a[href], .cloud_tag a[href]",
+      "mode": "compatible"
+    }
+  ]
+}
