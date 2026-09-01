@@ -4,22 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$Files = @(
-    "icon128.png"
-    "main.js"
-    "picker.css"
-    "picker.js"
-    "rules.js"
-    "service-worker.js"
-    "storage.js"
-    "options\options.css"
-    "options\options.html"
-    "options\options.js"
-    "popup\popup.css"
-    "popup\popup.html"
-    "popup\popup.js"
-    "manifest.json"
-)
+$FileListPath = Join-Path $PSScriptRoot "extension-files.json"
+$Files = @(Get-Content -LiteralPath $FileListPath -Raw | ConvertFrom-Json)
 
 if (-not (Test-Path -LiteralPath $Target -PathType Container)) {
     throw "测试扩展目录不存在：$Target"

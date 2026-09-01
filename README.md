@@ -39,6 +39,28 @@ pwsh -File .\scripts\deploy-test.ps1 -Target "D:\path\to\extension"
 
 同步后在 `chrome://extensions/` 中刷新原扩展。不要直接在测试部署目录修改源码，下一次同步会覆盖运行文件。
 
+### 生成 Chrome Web Store 发布包
+
+测试部署和正式打包共用 `scripts/extension-files.json` 中的运行文件清单。生成发布包：
+
+```powershell
+pwsh -File .\scripts\package.ps1
+```
+
+输出文件名从 Manifest 版本号生成：
+
+```text
+dist/OpenInNewTab-2.0.0.zip
+```
+
+同版本文件已经存在时，脚本会停止。确认需要重新生成时使用：
+
+```powershell
+pwsh -File .\scripts\package.ps1 -Force
+```
+
+脚本会检查 Manifest V3、版本号、文件路径、Manifest 引用、ZIP 条目和每个文件的 SHA256。ZIP 使用固定文件顺序和时间戳，相同源码会生成相同哈希。
+
 ## 使用
 
 点击扩展图标后，可以为当前网站选择：
