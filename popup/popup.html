@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>新标签打开规则</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>新标签打开规则</h1>
+      <p id="site-name">正在读取当前网站…</p>
+    </header>
+
+    <section id="available-actions" hidden>
+      <p id="rule-status" class="summary"></p>
+      <button id="pick-links" class="primary" type="button">
+        <strong>选择页面上的链接</strong>
+        <span>点击一个链接，预览并保存同类链接</span>
+      </button>
+      <button id="all-links" type="button">
+        <strong>该网站的所有链接</strong>
+        <span>普通点击都改为在新标签中打开</span>
+      </button>
+    </section>
+
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <button id="open-options" class="text-button" type="button">管理全部规则</button>
+  </main>
+
+  <script src="../rules.js"></script>
+  <script src="../storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

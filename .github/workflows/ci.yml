@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check main.js
+          node --check picker.js
+          node --check rules.js
+          node --check storage.js
+          node --check service-worker.js
+          node --check popup/popup.js
+          node --check options/options.js
+      - name: Run tests
+        run: node --test tests/rules.test.js

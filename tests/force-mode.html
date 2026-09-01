@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>保护模式行为测试</title>
+  <script>
+    globalThis.testResult = {
+      siteHandledClick: false,
+      extensionMessages: 0
+    };
+    globalThis.RuleEngine = {
+      matchesPage: () => true,
+      validateRule: () => ({ valid: true })
+    };
+    globalThis.RuleStore = {
+      STORAGE_KEY: "ruleConfig",
+      load: async () => ({
+        rules: [{
+          enabled: true,
+          pagePattern: "https://bbs.nga.cn/*",
+          linkSelector: "a.topic",
+          excludeSelector: "",
+          mode: "force"
+        }]
+      })
+    };
+    globalThis.chrome = {
+      runtime: {
+        sendMessage: () => { testResult.extensionMessages += 1; }
+      },
+      storage: {
+        onChanged: { addListener: () => {} }
+      }
+    };
+
+    document.addEventListener("click", () => {
+      testResult.siteHandledClick = true;
+    }, true);
+  </script>
+</head>
+<body>
+  <a class="topic" href="https://bbs.nga.cn/read.php?tid=123">主题链接</a>
+  <output id="result">等待测试</output>
+  <script src="../main.js"></script>
+  <script>
+    setTimeout(() => {
+      const anchor = document.querySelector("a");
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0
+      });
+      const defaultAllowed = anchor.dispatchEvent(event);
+      const passed = !testResult.siteHandledClick &&
+        defaultAllowed &&
+        anchor.target === "_blank" &&
+        anchor.relList.contains("noopener") &&
+        testResult.extensionMessages === 0;
+      document.querySelector("#result").textContent = passed ? "PASS" : "FAIL";
+      document.body.dataset.result = passed ? "pass" : "fail";
+    }, 0);
+  </script>
+</body>
+</html>

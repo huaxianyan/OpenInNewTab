@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "新标签打开规则",
+  "version": "2.0.0",
+  "description": "按你设置的站点规则，在新标签中打开指定链接。",
+  "minimum_chrome_version": "96",
+  "icons": {
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_title": "设置新标签打开方式",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ]
+}

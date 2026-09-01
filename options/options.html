@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>新标签打开规则</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>新标签打开规则</h1>
+        <p>指定网站和链接，普通点击时在新标签中打开。</p>
+      </div>
+      <button id="add-rule" class="primary" type="button">添加规则</button>
+    </header>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <section id="rule-list" aria-label="规则列表"></section>
+
+    <section id="empty-state" class="empty" hidden>
+      <h2>还没有规则</h2>
+      <p>添加第一条规则，只授权需要处理的网站。</p>
+    </section>
+  </main>
+
+  <dialog id="rule-dialog">
+    <form id="rule-form" method="dialog">
+      <div class="dialog-heading">
+        <h2 id="dialog-title">添加规则</h2>
+        <button id="close-dialog" class="icon-button" type="button" aria-label="关闭">×</button>
+      </div>
+
+      <input id="rule-id" type="hidden">
+
+      <label>
+        <span>规则名称</span>
+        <input id="rule-name" required autocomplete="off" placeholder="例如：V2EX 主题">
+      </label>
+
+      <label>
+        <span>页面范围</span>
+        <input id="page-pattern" required spellcheck="false" placeholder="https://www.example.com/*">
+        <small>使用 Chrome 匹配格式。保存时只申请这个网站的访问权限。</small>
+      </label>
+
+      <label>
+        <span>链接选择器</span>
+        <input id="link-selector" required spellcheck="false" placeholder="a.topic">
+        <small>填写 CSS 选择器，例如 <code>a[href^='/topic/']</code>。</small>
+      </label>
+
+      <label>
+        <span>排除选择器 <em>可选</em></span>
+        <input id="exclude-selector" spellcheck="false" placeholder="a.pagination">
+      </label>
+
+      <fieldset>
+        <legend>打开方式</legend>
+        <label class="radio-row">
+          <input type="radio" name="mode" value="compatible" checked>
+          <span><strong>兼容模式</strong><small>保留网站原有的点击处理，适合大多数链接。</small></span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="mode" value="force">
+          <span><strong>保护模式</strong><small>阻止网站接管点击，由浏览器在新标签中打开链接。</small></span>
+        </label>
+      </fieldset>
+
+      <p id="form-error" class="error" role="alert"></p>
+
+      <div class="dialog-actions">
+        <button id="cancel-rule" type="button">取消</button>
+        <button class="primary" type="submit">保存并授权</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="../rules.js"></script>
+  <script src="../storage.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>可视化排除行为测试</title>
+  <link rel="stylesheet" href="../picker.css">
+  <style>
+    a { display: block; width: 180px; height: 28px; margin: 8px; }
+  </style>
+  <script>
+    const nativeAttachShadow = Element.prototype.attachShadow;
+    Element.prototype.attachShadow = function (options) {
+      return nativeAttachShadow.call(this, { ...options, mode: "open" });
+    };
+
+    let pickerListener;
+    let savedRule;
+    globalThis.chrome = {
+      runtime: {
+        lastError: null,
+        onMessage: { addListener: (listener) => { pickerListener = listener; } },
+        sendMessage: (message, callback) => {
+          savedRule = message;
+          callback?.({ saved: true });
+        }
+      }
+    };
+  </script>
+</head>
+<body>
+  <a class="topic" href="/read.php?tid=1">主题一</a>
+  <a class="topic" href="/read.php?tid=2">主题二</a>
+  <a class="topic pagination" href="/read.php?page=2">下一页</a>
+  <output id="result">等待测试</output>
+
+  <script src="../picker.js"></script>
+  <script>
+    function clickUnderlying(element) {
+      const rect = element.getBoundingClientRect();
+      document.querySelector("#open-links-picker-overlay").dispatchEvent(new MouseEvent("click", {
+        bubbles: true,
+        clientX: rect.left + 4,
+        clientY: rect.top + 4
+      }));
+    }
+
+    setTimeout(() => {
+      pickerListener({
+        type: "start-link-picker",
+        pagePattern: "https://bbs.nga.cn/*",
+        revokePermissionOnCancel: false
+      });
+
+      clickUnderlying(document.querySelector("a.topic"));
+      const toolbar = document.querySelector("#open-links-picker-toolbar").shadowRoot;
+      toolbar.querySelector(".exclude").click();
+      clickUnderlying(document.querySelector("a.pagination"));
+      toolbar.querySelector(".exclude").click();
+      toolbar.querySelector(".save").click();
+
+      const passed = savedRule?.linkSelector === "a.topic" &&
+        savedRule?.excludeSelector === "a.pagination";
+      document.querySelector("#result").textContent = passed ? "PASS" : "FAIL";
+      document.body.dataset.result = passed ? "pass" : "fail";
+    }, 0);
+  </script>
+</body>
+</html>

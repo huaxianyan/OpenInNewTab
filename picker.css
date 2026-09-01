@@ -1,0 +1,31 @@
+#open-links-picker-overlay {
+  position: fixed !important;
+  z-index: 2147483646 !important;
+  inset: 0 !important;
+  cursor: crosshair !important;
+  background: transparent !important;
+}
+
+#open-links-picker-toolbar {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+
+[data-open-links-picker-hover] {
+  outline: 3px solid #ff9800 !important;
+  outline-offset: 2px !important;
+}
+
+[data-open-links-picker-match] {
+  outline: 3px solid #0b57d0 !important;
+  outline-offset: 2px !important;
+  background-color: rgb(11 87 208 / 10%) !important;
+}
+
+[data-open-links-picker-excluded] {
+  outline: 3px solid #d93025 !important;
+  outline-offset: 2px !important;
+  background-color: rgb(217 48 37 / 12%) !important;
+}
