@@ -48,4 +48,7 @@ jobs:
         run: ./scripts/package.ps1
       - name: Test package in a clean Chromium profile
         shell: pwsh
-        run: ./scripts/test-clean-package.ps1
+        run: |
+          $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
+          if (-not (Test-Path $edge)) { throw "Microsoft Edge is not available on this runner." }
+          ./scripts/test-clean-package.ps1 -BrowserPath $edge
