@@ -148,4 +148,4 @@ rule-sets/               可选下载和导入的社区规则集
 
 ## 当前状态
 
-Manifest V3 版本正在开发和重新上架准备中。正式发布前还会完成跨网站验收、打包检查和 Chrome Web Store 发布资料更新。
+Manifest V3 `2.0.0` 发布候选已经完成确定性打包和干净 Profile 自动验收。Chrome Web Store 提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。

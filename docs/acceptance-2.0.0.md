@@ -15,8 +15,8 @@
 - [x] `rule-sets/v2ex.json` 能显示导入预览并完成导入
 - [x] 导入后的 V2EX 主题链接规则能够正常工作
 
-## 尚待人工确认
+## 暂缓的人工项目
 
-其余首次授权、拒绝授权、可视化编辑、排除项、权限回收、NGA、PSNINE 和浏览器原生操作，继续按照 [`release-checklist.md`](release-checklist.md) 验收。
+首次授权拒绝、可视化编辑、排除项、权限回收、NGA、PSNINE 和浏览器原生操作尚未逐项人工确认。维护者于 2026-09-01 决定接受这部分发布风险，继续提交 Chrome Web Store。这些项目不能视为已通过，后续仍可按照 [`release-checklist.md`](release-checklist.md) 回归。
 
-Cent Browser 用于补充 Chromium 兼容性验证。提交 Chrome Web Store 前仍需在当前稳定版 Google Chrome 中完成最终人工验收。
+Cent Browser 用于补充 Chromium 兼容性验证。当前发布决定不等待官方 Google Chrome 的完整人工验收。
