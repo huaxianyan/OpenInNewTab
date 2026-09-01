@@ -170,7 +170,8 @@
       type: "save-picked-rule",
       pagePattern: session.pagePattern,
       linkSelector: candidate.selector,
-      excludeSelector: session.exclusions.join(", ")
+      excludeSelector: session.exclusions.join(", "),
+      mode: session.modeSelect.value
     }, (response) => {
       if (chrome.runtime.lastError || !response?.saved) {
         session.count.textContent = "规则没有保存成功，请重试。";
@@ -190,14 +191,22 @@
         :host { all: initial; }
         .bar { position: fixed; z-index: 2147483647; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; min-width: 560px; padding: 14px 16px; border-radius: 12px; color: #202124; background: #fff; box-shadow: 0 4px 24px rgb(0 0 0 / 28%); font: 14px/1.4 system-ui, sans-serif; pointer-events: auto; }
         .count { flex: 1; font-weight: 600; }
-        button { padding: 7px 12px; border: 1px solid #dadce0; border-radius: 7px; color: #202124; background: #fff; font: inherit; cursor: pointer; }
+        button, select { padding: 7px 12px; border: 1px solid #dadce0; border-radius: 7px; color: #202124; background: #fff; font: inherit; }
+        button { cursor: pointer; }
         button:hover { background: #f1f3f4; }
+        .mode { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; }
         button:disabled { opacity: .45; cursor: default; }
         .save { border-color: #0b57d0; color: #fff; background: #0b57d0; }
         .save:hover { background: #0842a0; }
       </style>
       <div class="bar">
         <span class="count">点击一个需要新标签打开的链接</span>
+        <label class="mode" hidden>打开方式
+          <select>
+            <option value="compatible">保留网站交互</option>
+            <option value="force">阻止网站接管</option>
+          </select>
+        </label>
         <button class="narrow" type="button" hidden>缩小范围</button>
         <button class="expand" type="button" hidden>扩大范围</button>
         <button class="exclude" type="button" hidden>排除链接</button>
@@ -211,6 +220,8 @@
     return {
       host,
       count: shadow.querySelector(".count"),
+      modeControl: shadow.querySelector(".mode"),
+      modeSelect: shadow.querySelector(".mode select"),
       narrow: shadow.querySelector(".narrow"),
       expand: shadow.querySelector(".expand"),
       exclude: shadow.querySelector(".exclude"),
@@ -304,6 +315,7 @@
       session.hoveredAnchor = null;
       session.candidates = candidateSelectors(anchor);
       session.mode = "selection";
+      session.modeControl.hidden = false;
       session.narrow.hidden = false;
       session.expand.hidden = false;
       session.exclude.hidden = false;

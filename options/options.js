@@ -7,13 +7,24 @@
   const dialog = document.querySelector("#rule-dialog");
   const form = document.querySelector("#rule-form");
   const formError = document.querySelector("#form-error");
+  const importFile = document.querySelector("#import-file");
+  const importDialog = document.querySelector("#import-dialog");
+  const importForm = document.querySelector("#import-form");
+  const importSummary = document.querySelector("#import-summary");
+  const importRuleList = document.querySelector("#import-rule-list");
+  const importError = document.querySelector("#import-error");
   let rules = [];
+  let pendingImport;
 
   function setStatus(message) {
     status.textContent = message;
     if (message) setTimeout(() => {
       if (status.textContent === message) status.textContent = "";
     }, 3000);
+  }
+
+  function validateSelector(selector) {
+    document.querySelector(selector);
   }
 
   function ruleFromForm() {
@@ -55,8 +66,17 @@
       toggle.checked = rule.enabled;
       toggle.setAttribute("aria-label", `${rule.enabled ? "停用" : "启用"}${rule.name}`);
       toggle.addEventListener("change", async () => {
+        const response = await chrome.runtime.sendMessage({
+          type: "update-rule",
+          ruleId: rule.id,
+          changes: { enabled: toggle.checked }
+        });
+        if (!response?.updated) {
+          toggle.checked = rule.enabled;
+          setStatus("规则状态没有保存成功。");
+          return;
+        }
         rule.enabled = toggle.checked;
-        await RuleStore.save(rules);
         setStatus(rule.enabled ? "规则已启用。" : "规则已停用。");
       });
 
@@ -90,15 +110,110 @@
   }
 
   async function deleteRule(rule) {
+    if (!confirm(`删除规则「${rule.name}」？`)) return;
+    const response = await chrome.runtime.sendMessage({
+      type: "delete-rule",
+      ruleId: rule.id
+    });
+    if (!response?.deleted) {
+      setStatus("规则没有删除成功。");
+      return;
+    }
+
     rules = rules.filter((item) => item.id !== rule.id);
-    await RuleStore.save(rules);
-
-    const origin = RuleEngine.permissionPattern(rule.pagePattern);
-    const stillUsed = rules.some((item) => RuleEngine.permissionPattern(item.pagePattern) === origin);
-    if (origin && !stillUsed) await chrome.permissions.remove({ origins: [origin] });
-
     render();
     setStatus("规则已删除。");
+  }
+
+  function safeHomepage(value) {
+    try {
+      const url = new URL(value);
+      return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function renderImportPreview(ruleSet, fileName) {
+    pendingImport = ruleSet;
+    importSummary.replaceChildren();
+    importRuleList.replaceChildren();
+    importError.textContent = "";
+
+    const title = document.createElement("h3");
+    title.textContent = ruleSet.title;
+    const source = document.createElement("p");
+    source.textContent = `文件：${fileName} · 共 ${ruleSet.rules.length} 条规则`;
+    importSummary.append(title, source);
+
+    if (ruleSet.description) {
+      const description = document.createElement("p");
+      description.textContent = ruleSet.description;
+      importSummary.append(description);
+    }
+    const homepage = safeHomepage(ruleSet.homepage);
+    if (homepage) {
+      const link = document.createElement("a");
+      link.href = homepage;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "查看规则来源";
+      importSummary.append(link);
+    }
+
+    const existingIdentities = new Set(rules.map(RuleEngine.ruleIdentity));
+    ruleSet.rules.forEach((rule, index) => {
+      const row = document.createElement("label");
+      row.className = "import-rule";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = true;
+      checkbox.dataset.index = String(index);
+
+      const detail = document.createElement("span");
+      const name = document.createElement("strong");
+      name.textContent = rule.name;
+      const scope = document.createElement("small");
+      scope.textContent = rule.pagePattern;
+      const behavior = document.createElement("small");
+      behavior.textContent = rule.mode === "force" ? "阻止网站接管" : "保留网站交互";
+      detail.append(name, scope, behavior);
+
+      if (existingIdentities.has(RuleEngine.ruleIdentity(rule))) {
+        const duplicate = document.createElement("small");
+        duplicate.className = "duplicate";
+        duplicate.textContent = "已存在，导入后将更新";
+        detail.append(duplicate);
+      }
+
+      row.append(checkbox, detail);
+      importRuleList.append(row);
+    });
+
+    importDialog.showModal();
+  }
+
+  function exportRules() {
+    if (!rules.length) {
+      setStatus("当前没有可导出的规则。");
+      return;
+    }
+
+    const ruleSet = RuleEngine.createRuleSet(rules, {
+      title: "我的 OpenInNewTab 规则",
+      description: "从 OpenInNewTab 设置页导出的规则。",
+      homepage: "https://github.com/huaxianyan/OpenInNewTab"
+    });
+    const blob = new Blob([`${JSON.stringify(ruleSet, null, 2)}\n`], {
+      type: "application/json"
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "open-in-new-tab-rules.json";
+    link.click();
+    URL.revokeObjectURL(url);
+    setStatus(`已导出 ${rules.length} 条规则。`);
   }
 
   form.addEventListener("submit", async (event) => {
@@ -106,7 +221,7 @@
     formError.textContent = "";
 
     const rule = ruleFromForm();
-    const validation = RuleEngine.validateRule(rule, (selector) => document.querySelector(selector));
+    const validation = RuleEngine.validateRule(rule, validateSelector);
     if (!validation.valid) {
       formError.textContent = validation.error;
       return;
@@ -141,9 +256,72 @@
     setStatus("规则已保存，刷新目标页面后生效。");
   });
 
+  importFile.addEventListener("change", async () => {
+    const [file] = importFile.files;
+    importFile.value = "";
+    if (!file) return;
+
+    try {
+      const content = JSON.parse(await file.text());
+      const parsed = RuleEngine.parseRuleSet(content, validateSelector);
+      if (!parsed.valid) {
+        setStatus(parsed.error);
+        return;
+      }
+      renderImportPreview(parsed.value, file.name);
+    } catch {
+      setStatus("无法读取这个规则文件，请确认它是有效的 JSON 文件。");
+    }
+  });
+
+  importForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    importError.textContent = "";
+    const selected = [...importRuleList.querySelectorAll("input:checked")].map((checkbox) => {
+      return pendingImport.rules[Number(checkbox.dataset.index)];
+    });
+    if (!selected.length) {
+      importError.textContent = "请至少选择一条规则。";
+      return;
+    }
+
+    const origins = [...new Set(selected.map((rule) => {
+      return RuleEngine.permissionPattern(rule.pagePattern);
+    }))];
+    chrome.permissions.request({ origins }).then(async (granted) => {
+      if (!granted) {
+        importError.textContent = "需要获得所选网站的访问权限才能导入规则。";
+        return;
+      }
+
+      const byIdentity = new Map(rules.map((rule) => [RuleEngine.ruleIdentity(rule), rule]));
+      for (const imported of selected) {
+        const existing = byIdentity.get(RuleEngine.ruleIdentity(imported));
+        const rule = RuleEngine.normalizeRule({
+          ...imported,
+          id: existing?.id || crypto.randomUUID()
+        });
+        if (existing) Object.assign(existing, rule, { id: existing.id });
+        else {
+          rules.push(rule);
+          byIdentity.set(RuleEngine.ruleIdentity(rule), rule);
+        }
+      }
+
+      await RuleStore.save(rules);
+      importDialog.close();
+      render();
+      setStatus(`已导入 ${selected.length} 条规则，刷新目标页面后生效。`);
+    });
+  });
+
   document.querySelector("#add-rule").addEventListener("click", () => openDialog());
+  document.querySelector("#import-rules").addEventListener("click", () => importFile.click());
+  document.querySelector("#export-rules").addEventListener("click", exportRules);
   document.querySelector("#close-dialog").addEventListener("click", () => dialog.close());
   document.querySelector("#cancel-rule").addEventListener("click", () => dialog.close());
+  document.querySelector("#close-import").addEventListener("click", () => importDialog.close());
+  document.querySelector("#cancel-import").addEventListener("click", () => importDialog.close());
 
   RuleStore.load().then((config) => {
     rules = config.rules;

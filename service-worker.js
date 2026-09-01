@@ -161,6 +161,39 @@ async function releaseSitePermission(pagePattern) {
   return chrome.permissions.remove({ origins: [permission] });
 }
 
+async function updateRule(ruleId, changes) {
+  const config = await RuleStore.load();
+  const rule = config.rules.find((item) => item.id === ruleId);
+  if (!rule) return { updated: false };
+
+  if (typeof changes.enabled === "boolean") rule.enabled = changes.enabled;
+  if (changes.mode === "compatible" || changes.mode === "force") {
+    rule.mode = changes.mode;
+  }
+
+  await RuleStore.save(config.rules);
+  return { updated: true, rule };
+}
+
+async function deleteRule(ruleId) {
+  const config = await RuleStore.load();
+  const rule = config.rules.find((item) => item.id === ruleId);
+  if (!rule) return { deleted: false };
+
+  const rules = config.rules.filter((item) => item.id !== ruleId);
+  await RuleStore.save(rules);
+
+  const permission = RuleEngine.permissionPattern(rule.pagePattern);
+  const stillUsed = rules.some((item) => {
+    return RuleEngine.permissionPattern(item.pagePattern) === permission;
+  });
+  if (permission && !stillUsed) {
+    await chrome.permissions.remove({ origins: [permission] });
+  }
+
+  return { deleted: true };
+}
+
 async function savePickedRule(message, sender) {
   if (!sender.tab?.url || !RuleEngine.matchesPage(message.pagePattern, sender.tab.url)) {
     return { saved: false };
@@ -173,7 +206,7 @@ async function savePickedRule(message, sender) {
     pagePattern: message.pagePattern,
     linkSelector: message.linkSelector,
     excludeSelector: message.excludeSelector || "",
-    mode: "compatible"
+    mode: message.mode
   });
   if (!RuleEngine.validateRule(candidate).valid) return { saved: false };
 
@@ -191,6 +224,7 @@ async function savePickedRule(message, sender) {
   if (existing) {
     existing.enabled = true;
     existing.excludeSelector = candidate.excludeSelector;
+    existing.mode = candidate.mode;
   } else {
     config.rules.push(candidate);
   }
@@ -201,6 +235,22 @@ async function savePickedRule(message, sender) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "update-rule") {
+    updateRule(message.ruleId, message.changes || {}).then(
+      sendResponse,
+      () => sendResponse({ updated: false })
+    );
+    return true;
+  }
+
+  if (message?.type === "delete-rule") {
+    deleteRule(message.ruleId).then(
+      sendResponse,
+      () => sendResponse({ deleted: false })
+    );
+    return true;
+  }
+
   if (message?.type === "clear-site-action") {
     chrome.storage.session.remove(PENDING_ACTION_KEY).then(
       () => sendResponse({ cleared: true }),

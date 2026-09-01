@@ -3,6 +3,8 @@
 
   const MATCH_PATTERN = /^(\*|https?|file|ftp):\/\/(\*|\*\.[^/*]+|[^/*]+)(\/.*)$/i;
   const MODES = new Set(["compatible", "force"]);
+  const RULE_SET_FORMAT = "open-in-new-tab-rules";
+  const RULE_SET_VERSION = 1;
 
   function escapeRegExp(value) {
     return value.replace(/[|\\{}()[\]^$+?.-]/g, "\\$&");
@@ -92,21 +94,86 @@
 
   function normalizeRule(rule) {
     return {
-      id: String(rule.id),
-      name: String(rule.name).trim(),
+      id: String(rule.id ?? ""),
+      name: String(rule.name ?? "").trim(),
       enabled: rule.enabled !== false,
-      pagePattern: String(rule.pagePattern).trim(),
-      linkSelector: String(rule.linkSelector).trim(),
+      pagePattern: String(rule.pagePattern ?? "").trim(),
+      linkSelector: String(rule.linkSelector ?? "").trim(),
       excludeSelector: String(rule.excludeSelector || "").trim(),
       mode: MODES.has(rule.mode) ? rule.mode : "compatible"
     };
   }
 
+  function ruleIdentity(rule) {
+    return `${rule.pagePattern}\n${rule.linkSelector}`;
+  }
+
+  function createRuleSet(rules, metadata = {}) {
+    return {
+      format: RULE_SET_FORMAT,
+      version: RULE_SET_VERSION,
+      title: String(metadata.title || "OpenInNewTab 规则").trim(),
+      description: String(metadata.description || "").trim(),
+      homepage: String(metadata.homepage || "").trim(),
+      rules: rules.map((rule) => {
+        const normalized = normalizeRule(rule);
+        return {
+          name: normalized.name,
+          enabled: normalized.enabled,
+          pagePattern: normalized.pagePattern,
+          linkSelector: normalized.linkSelector,
+          excludeSelector: normalized.excludeSelector,
+          mode: normalized.mode
+        };
+      })
+    };
+  }
+
+  function parseRuleSet(input, validateSelector) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return { valid: false, error: "规则文件内容无效。" };
+    }
+    if (input.format !== RULE_SET_FORMAT || input.version !== RULE_SET_VERSION) {
+      return { valid: false, error: "规则文件格式或版本不受支持。" };
+    }
+    if (!Array.isArray(input.rules) || input.rules.length === 0) {
+      return { valid: false, error: "规则文件中没有可导入的规则。" };
+    }
+
+    const rules = [];
+    for (let index = 0; index < input.rules.length; index += 1) {
+      const rule = normalizeRule({ ...input.rules[index], id: `import-${index}` });
+      const validation = validateRule(rule, validateSelector);
+      if (!validation.valid) {
+        return {
+          valid: false,
+          error: `第 ${index + 1} 条规则无效：${validation.error}`
+        };
+      }
+      rules.push(rule);
+    }
+
+    return {
+      valid: true,
+      value: {
+        title: String(input.title || "未命名规则集").trim(),
+        description: String(input.description || "").trim(),
+        homepage: String(input.homepage || "").trim(),
+        rules
+      }
+    };
+  }
+
   globalThis.RuleEngine = Object.freeze({
+    RULE_SET_FORMAT,
+    RULE_SET_VERSION,
+    createRuleSet,
     matchesPage,
     normalizeRule,
     parsePattern,
+    parseRuleSet,
     permissionPattern,
+    ruleIdentity,
     validateRule
   });
 })();

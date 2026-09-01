@@ -6,13 +6,13 @@
 }
 
 * { box-sizing: border-box; }
-body { width: 340px; margin: 0; }
+body { width: 380px; margin: 0; }
 main { padding: 18px; }
 h1 { margin: 0 0 5px; font-size: 18px; }
 header p, .summary { margin: 0 0 16px; color: GrayText; overflow-wrap: anywhere; }
 
 button {
-  width: 100%;
+  width: auto;
   margin-top: 10px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
@@ -24,9 +24,18 @@ button {
 }
 button:hover { background: color-mix(in srgb, CanvasText 7%, Canvas); }
 button.primary { border-color: #0b57d0; background: #0b57d0; color: white; }
+button.action-button { width: 100%; }
 button strong, button span { display: block; }
 button span { margin-top: 3px; font-size: 12px; opacity: .8; }
 button:disabled { cursor: default; opacity: .55; }
+
+.current-rules { margin: 0 0 14px; border-top: 1px solid color-mix(in srgb, CanvasText 16%, transparent); }
+.rule-row { padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, CanvasText 16%, transparent); }
+.rule-heading { display: flex; align-items: center; gap: 8px; }
+.rule-heading strong { flex: 1; overflow-wrap: anywhere; }
+.rule-controls { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.rule-controls select { flex: 1; min-width: 0; padding: 7px; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); border-radius: 7px; background: Canvas; color: CanvasText; }
+.rule-controls button { margin: 0; padding: 7px 10px; color: #b3261e; }
 
 .message { min-height: 20px; margin: 12px 0 0; color: #b3261e; }
 button.text-button {

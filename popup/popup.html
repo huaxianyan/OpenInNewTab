@@ -15,11 +15,16 @@
 
     <section id="available-actions" hidden>
       <p id="rule-status" class="summary"></p>
-      <button id="pick-links" class="primary" type="button">
+
+      <section id="current-rules" class="current-rules" hidden>
+        <div id="current-rule-list"></div>
+      </section>
+
+      <button id="pick-links" class="primary action-button" type="button">
         <strong>选择页面上的链接</strong>
         <span>点击一个链接，预览并保存同类链接</span>
       </button>
-      <button id="all-links" type="button">
+      <button id="all-links" class="action-button" type="button">
         <strong>该网站的所有链接</strong>
         <span>普通点击都改为在新标签中打开</span>
       </button>

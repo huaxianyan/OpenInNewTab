@@ -24,6 +24,7 @@ header {
 
 h1, h2, p { margin-top: 0; }
 header p, small { color: GrayText; }
+.header-actions { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
 
 button {
   border: 1px solid color-mix(in srgb, CanvasText 25%, transparent);
@@ -96,6 +97,22 @@ legend { margin-bottom: 9px; font-weight: 600; }
 
 .error { min-height: 24px; color: #b3261e; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+.import-summary { margin: 8px 0 18px; }
+.import-summary h3 { margin: 0 0 6px; }
+.import-summary p { margin: 5px 0; color: GrayText; }
+.import-summary a { color: #0b57d0; }
+.import-rule-list { max-height: 420px; overflow: auto; border-block: 1px solid color-mix(in srgb, CanvasText 18%, transparent); }
+.import-rule { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 13px 4px; border-bottom: 1px solid color-mix(in srgb, CanvasText 12%, transparent); }
+.import-rule:last-child { border-bottom: 0; }
+.import-rule input { margin-top: 4px; }
+.import-rule strong, .import-rule small { display: block; }
+.import-rule small { margin-top: 3px; overflow-wrap: anywhere; }
+.import-rule .duplicate { color: #b06000; }
+
+@media (max-width: 680px) {
+  .header-actions { justify-content: flex-start; }
+}
 
 @media (max-width: 680px) {
   main { width: min(100% - 24px, 900px); margin-top: 24px; }

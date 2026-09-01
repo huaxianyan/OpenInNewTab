@@ -13,7 +13,12 @@
         <h1>新标签打开规则</h1>
         <p>指定网站和链接，普通点击时在新标签中打开。</p>
       </div>
-      <button id="add-rule" class="primary" type="button">添加规则</button>
+      <div class="header-actions">
+        <button id="import-rules" type="button">导入规则</button>
+        <button id="export-rules" type="button">导出规则</button>
+        <button id="add-rule" class="primary" type="button">添加规则</button>
+      </div>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
     </header>
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -73,6 +78,24 @@
       <div class="dialog-actions">
         <button id="cancel-rule" type="button">取消</button>
         <button class="primary" type="submit">保存并授权</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="import-dialog">
+    <form id="import-form" method="dialog">
+      <div class="dialog-heading">
+        <h2>导入规则</h2>
+        <button id="close-import" class="icon-button" type="button" aria-label="关闭">×</button>
+      </div>
+
+      <section id="import-summary" class="import-summary"></section>
+      <div id="import-rule-list" class="import-rule-list"></div>
+      <p id="import-error" class="error" role="alert"></p>
+
+      <div class="dialog-actions">
+        <button id="cancel-import" type="button">取消</button>
+        <button class="primary" type="submit">导入所选规则</button>
       </div>
     </form>
   </dialog>
