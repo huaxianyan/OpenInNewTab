@@ -23,6 +23,22 @@
 
 修改代码后，需要在扩展管理页面刷新扩展。已经打开的目标页面通常也需要刷新。
 
+### 保留原测试版数据
+
+如果 Chrome 之前从 `E:\dev\aboutblank` 加载扩展，继续使用该目录可以保留原解压扩展 ID 对应的规则数据。仓库是唯一源码，使用以下命令把当前测试版同步到旧加载目录：
+
+```powershell
+pwsh -File .\scripts\deploy-test.ps1
+```
+
+也可以指定其他已加载目录：
+
+```powershell
+pwsh -File .\scripts\deploy-test.ps1 -Target "D:\path\to\extension"
+```
+
+同步后在 `chrome://extensions/` 中刷新原扩展。不要直接在测试部署目录修改源码，下一次同步会覆盖运行文件。
+
 ## 使用
 
 点击扩展图标后，可以为当前网站选择：
