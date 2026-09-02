@@ -5,6 +5,9 @@
   const MODES = new Set(["compatible", "force"]);
   const RULE_SET_FORMAT = "open-in-new-tab-rules";
   const RULE_SET_VERSION = 1;
+  const RULE_INDEX_FORMAT = "open-in-new-tab-rule-index";
+  const RULE_INDEX_VERSION = 1;
+  const DEFAULT_RULE_INDEX_URL = "https://raw.githubusercontent.com/huaxianyan/OpenInNewTab/main/rule-sets/index.json";
 
   function escapeRegExp(value) {
     return value.replace(/[|\\{}()[\]^$+?.-]/g, "\\$&");
@@ -59,6 +62,62 @@
     const parsed = parsePattern(pagePattern);
     if (!parsed || parsed.scheme === "file" || parsed.scheme === "ftp") return null;
     return `${parsed.scheme}://${parsed.host}/*`;
+  }
+
+  function ruleSourcePermissionPattern(value) {
+    try {
+      const url = new URL(value);
+      if ((url.protocol !== "http:" && url.protocol !== "https:") ||
+          url.username || url.password) return null;
+      return `${url.origin}/*`;
+    } catch {
+      return null;
+    }
+  }
+
+  function parseRuleIndex(input, sourceUrl) {
+    let baseUrl;
+    try {
+      baseUrl = new URL(sourceUrl);
+    } catch {
+      return { valid: false, error: "规则上游地址无效。" };
+    }
+    if (!ruleSourcePermissionPattern(baseUrl.href)) {
+      return { valid: false, error: "规则上游地址必须使用 HTTP 或 HTTPS。" };
+    }
+    if (!input || typeof input !== "object" || Array.isArray(input) ||
+        input.format !== RULE_INDEX_FORMAT || input.version !== RULE_INDEX_VERSION) {
+      return { valid: false, error: "规则上游格式或版本不受支持。" };
+    }
+    if (!Array.isArray(input.files) || input.files.length === 0) {
+      return { valid: false, error: "规则上游中没有可用的规则集。" };
+    }
+
+    const files = [];
+    for (const value of input.files) {
+      if (typeof value !== "string" || !value.trim()) {
+        return { valid: false, error: "规则上游包含无效的规则文件地址。" };
+      }
+      let url;
+      try {
+        url = new URL(value.trim(), baseUrl);
+      } catch {
+        return { valid: false, error: "规则上游包含无效的规则文件地址。" };
+      }
+      if (url.origin !== baseUrl.origin || !ruleSourcePermissionPattern(url.href)) {
+        return { valid: false, error: "规则文件必须与规则上游位于同一站点。" };
+      }
+      files.push(url.href);
+    }
+
+    return {
+      valid: true,
+      value: {
+        title: String(input.title || "云端规则").trim(),
+        description: String(input.description || "").trim(),
+        files: [...new Set(files)]
+      }
+    };
   }
 
   function validateRule(rule, validateSelector) {
@@ -211,15 +270,20 @@
   }
 
   globalThis.RuleEngine = Object.freeze({
+    DEFAULT_RULE_INDEX_URL,
+    RULE_INDEX_FORMAT,
+    RULE_INDEX_VERSION,
     RULE_SET_FORMAT,
     RULE_SET_VERSION,
     createRuleSet,
     matchesPage,
     normalizeRule,
     parsePattern,
+    parseRuleIndex,
     parseRuleSet,
     permissionPattern,
     ruleIdentity,
+    ruleSourcePermissionPattern,
     splitSelectorList,
     validateRule
   });

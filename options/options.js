@@ -13,6 +13,10 @@
   const importSummary = document.querySelector("#import-summary");
   const importRuleList = document.querySelector("#import-rule-list");
   const importError = document.querySelector("#import-error");
+  const ruleSourceForm = document.querySelector("#rule-source-form");
+  const ruleSourceUrl = document.querySelector("#rule-source-url");
+  const ruleSourceError = document.querySelector("#rule-source-error");
+  const cloudRuleList = document.querySelector("#cloud-rule-list");
   let rules = [];
   let pendingImport;
 
@@ -167,6 +171,111 @@
     }
   }
 
+  async function fetchJson(url) {
+    const response = await fetch(url, {
+      cache: "no-store",
+      credentials: "omit",
+      referrerPolicy: "no-referrer"
+    });
+    if (!response.ok) throw new Error(`请求返回了 ${response.status}。`);
+    return response.json();
+  }
+
+  function cloudFileName(url) {
+    const path = new URL(url).pathname;
+    return decodeURIComponent(path.slice(path.lastIndexOf("/") + 1)) || "云端规则.json";
+  }
+
+  function renderCloudRules(index, ruleSets) {
+    cloudRuleList.replaceChildren();
+
+    const summary = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = index.title;
+    const detail = document.createElement("p");
+    detail.textContent = index.description || `找到 ${ruleSets.length} 个规则集。`;
+    summary.append(title, detail);
+    cloudRuleList.append(summary);
+
+    for (const item of ruleSets) {
+      const card = document.createElement("article");
+      card.className = "cloud-rule-card";
+      const content = document.createElement("div");
+      const name = document.createElement("h3");
+      name.textContent = item.ruleSet.title;
+      const description = document.createElement("p");
+      description.textContent = item.ruleSet.description || "这个规则集没有补充说明。";
+      const count = document.createElement("p");
+      count.textContent = `${item.ruleSet.rules.length} 条规则 · ${cloudFileName(item.url)}`;
+      content.append(name, description, count);
+
+      const view = document.createElement("button");
+      view.type = "button";
+      view.textContent = "查看并选择";
+      view.addEventListener("click", () => {
+        renderImportPreview(item.ruleSet, cloudFileName(item.url));
+      });
+      card.append(content, view);
+      cloudRuleList.append(card);
+    }
+  }
+
+  async function loadCloudRules() {
+    ruleSourceError.textContent = "";
+    cloudRuleList.replaceChildren();
+
+    let sourceUrl;
+    try {
+      sourceUrl = new URL(ruleSourceUrl.value.trim()).href;
+    } catch {
+      ruleSourceError.textContent = "请填写有效的规则上游地址。";
+      return;
+    }
+    const permission = RuleEngine.ruleSourcePermissionPattern(sourceUrl);
+    if (!permission) {
+      ruleSourceError.textContent = "规则上游地址必须使用 HTTP 或 HTTPS。";
+      return;
+    }
+
+    const granted = await chrome.permissions.request({ origins: [permission] });
+    if (!granted) {
+      ruleSourceError.textContent = "需要获得规则上游站点的访问权限才能读取规则。";
+      return;
+    }
+
+    try {
+      const content = await fetchJson(sourceUrl);
+      const parsedIndex = RuleEngine.parseRuleIndex(content, sourceUrl);
+      if (!parsedIndex.valid) throw new Error(parsedIndex.error);
+
+      const ruleSets = await Promise.all(parsedIndex.value.files.map(async (url) => {
+        const parsed = RuleEngine.parseRuleSet(await fetchJson(url), validateSelector);
+        if (!parsed.valid) throw new Error(`${cloudFileName(url)}：${parsed.error}`);
+        return { url, ruleSet: parsed.value };
+      }));
+
+      const previousSource = await RuleStore.loadRuleSource();
+      await RuleStore.saveRuleSource(sourceUrl);
+      ruleSourceUrl.value = sourceUrl;
+      if (previousSource !== sourceUrl) {
+        await chrome.runtime.sendMessage({
+          type: "release-rule-source-permission",
+          ruleSource: previousSource
+        });
+      }
+      renderCloudRules(parsedIndex.value, ruleSets);
+      setStatus(`已读取 ${ruleSets.length} 个云端规则集。`);
+    } catch (error) {
+      await chrome.runtime.sendMessage({
+        type: "release-rule-source-permission",
+        ruleSource: sourceUrl
+      });
+      ruleSourceError.textContent = error instanceof SyntaxError
+        ? "规则上游返回的内容不是有效的 JSON。"
+        : `无法读取云端规则：${error.message || "请检查地址后重试。"}`;
+    }
+  }
+
   function renderImportPreview(ruleSet, fileName) {
     pendingImport = ruleSet;
     importSummary.replaceChildren();
@@ -268,20 +377,18 @@
     }
 
     const index = rules.findIndex((item) => item.id === rule.id);
-    const previousOrigin = index === -1
-      ? null
-      : RuleEngine.permissionPattern(rules[index].pagePattern);
+    const previousPagePattern = index === -1 ? null : rules[index].pagePattern;
 
     if (index === -1) rules.push(rule);
     else rules[index] = { ...rule, enabled: rules[index].enabled };
 
     await RuleStore.save(rules);
 
-    const oldOriginStillUsed = rules.some((item) => {
-      return RuleEngine.permissionPattern(item.pagePattern) === previousOrigin;
-    });
-    if (previousOrigin && previousOrigin !== origin && !oldOriginStillUsed) {
-      await chrome.permissions.remove({ origins: [previousOrigin] });
+    if (previousPagePattern && RuleEngine.permissionPattern(previousPagePattern) !== origin) {
+      await chrome.runtime.sendMessage({
+        type: "release-site-permission",
+        pagePattern: previousPagePattern
+      });
     }
 
     dialog.close();
@@ -348,6 +455,15 @@
     });
   });
 
+  ruleSourceForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    loadCloudRules();
+  });
+  document.querySelector("#reset-rule-source").addEventListener("click", () => {
+    ruleSourceUrl.value = RuleEngine.DEFAULT_RULE_INDEX_URL;
+    loadCloudRules();
+  });
+
   document.querySelector("#add-rule").addEventListener("click", () => openDialog());
   document.querySelector("#import-rules").addEventListener("click", () => importFile.click());
   document.querySelector("#export-rules").addEventListener("click", exportRules);
@@ -356,8 +472,9 @@
   document.querySelector("#close-import").addEventListener("click", () => importDialog.close());
   document.querySelector("#cancel-import").addEventListener("click", () => importDialog.close());
 
-  RuleStore.load().then((config) => {
+  Promise.all([RuleStore.load(), RuleStore.loadRuleSource()]).then(([config, source]) => {
     rules = config.rules;
+    ruleSourceUrl.value = source;
     render();
   });
 })();

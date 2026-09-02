@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "ruleConfig";
+  const RULE_SOURCE_KEY = "ruleSource";
   const EMPTY_CONFIG = Object.freeze({ schemaVersion: 1, rules: [] });
 
   async function load() {
@@ -26,5 +27,28 @@
     return config;
   }
 
-  globalThis.RuleStore = Object.freeze({ STORAGE_KEY, load, save });
+  async function loadRuleSource() {
+    const stored = await chrome.storage.sync.get(RULE_SOURCE_KEY);
+    const value = stored[RULE_SOURCE_KEY];
+    return RuleEngine.ruleSourcePermissionPattern(value)
+      ? value
+      : RuleEngine.DEFAULT_RULE_INDEX_URL;
+  }
+
+  async function saveRuleSource(value) {
+    if (!RuleEngine.ruleSourcePermissionPattern(value)) {
+      throw new Error("Invalid rule source");
+    }
+    await chrome.storage.sync.set({ [RULE_SOURCE_KEY]: value });
+    return value;
+  }
+
+  globalThis.RuleStore = Object.freeze({
+    RULE_SOURCE_KEY,
+    STORAGE_KEY,
+    load,
+    loadRuleSource,
+    save,
+    saveRuleSource
+  });
 })();

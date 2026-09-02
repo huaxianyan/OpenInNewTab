@@ -22,6 +22,27 @@
     </header>
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <section class="cloud-rules" aria-labelledby="cloud-rules-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="cloud-rules-title">云端规则</h2>
+          <p>从你信任的规则上游查看规则，选择后仍需确认导入和网站权限。</p>
+        </div>
+      </div>
+      <form id="rule-source-form" class="rule-source-form">
+        <label for="rule-source-url">规则上游地址</label>
+        <div class="rule-source-row">
+          <input id="rule-source-url" type="url" required spellcheck="false">
+          <button class="primary" type="submit">获取云端规则</button>
+          <button id="reset-rule-source" type="button">恢复默认</button>
+        </div>
+        <small>地址应指向规则索引 JSON。扩展只在你点击获取时访问这个地址。</small>
+        <p id="rule-source-error" class="error" role="alert"></p>
+      </form>
+      <section id="cloud-rule-list" class="cloud-rule-list" aria-live="polite"></section>
+    </section>
+
     <section id="rule-list" aria-label="规则列表"></section>
 
     <section id="empty-state" class="empty" hidden>

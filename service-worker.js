@@ -157,17 +157,28 @@ function resumePendingSiteAction() {
   return pendingActionWork;
 }
 
-async function releaseSitePermission(pagePattern) {
-  const permission = RuleEngine.permissionPattern(pagePattern);
+async function releasePermissionIfUnused(permission) {
   if (!permission) return false;
 
-  const config = await RuleStore.load();
-  const stillUsed = config.rules.some((rule) => {
+  const [config, ruleSource] = await Promise.all([
+    RuleStore.load(),
+    RuleStore.loadRuleSource()
+  ]);
+  const usedByRule = config.rules.some((rule) => {
     return RuleEngine.permissionPattern(rule.pagePattern) === permission;
   });
-  if (stillUsed) return false;
+  const usedBySource = RuleEngine.ruleSourcePermissionPattern(ruleSource) === permission;
+  if (usedByRule || usedBySource) return false;
 
   return chrome.permissions.remove({ origins: [permission] });
+}
+
+async function releaseSitePermission(pagePattern) {
+  return releasePermissionIfUnused(RuleEngine.permissionPattern(pagePattern));
+}
+
+async function releaseRuleSourcePermission(ruleSource) {
+  return releasePermissionIfUnused(RuleEngine.ruleSourcePermissionPattern(ruleSource));
 }
 
 async function updateRule(ruleId, changes) {
@@ -192,14 +203,7 @@ async function deleteRule(ruleId) {
   const rules = config.rules.filter((item) => item.id !== ruleId);
   await RuleStore.save(rules);
 
-  const permission = RuleEngine.permissionPattern(rule.pagePattern);
-  const stillUsed = rules.some((item) => {
-    return RuleEngine.permissionPattern(item.pagePattern) === permission;
-  });
-  if (permission && !stillUsed) {
-    await chrome.permissions.remove({ origins: [permission] });
-  }
-
+  await releaseSitePermission(rule.pagePattern);
   return { deleted: true };
 }
 
@@ -301,6 +305,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "release-site-permission") {
     releaseSitePermission(message.pagePattern).then(
+      (removed) => sendResponse({ removed }),
+      () => sendResponse({ removed: false })
+    );
+    return true;
+  }
+
+  if (message?.type === "release-rule-source-permission") {
+    releaseRuleSourcePermission(message.ruleSource).then(
       (removed) => sendResponse({ removed }),
       () => sendResponse({ removed: false })
     );

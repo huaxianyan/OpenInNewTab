@@ -93,3 +93,29 @@ test("不支持的规则集版本不会进入导入预览", () => {
   assert.equal(parsed.valid, false);
   assert.equal(parsed.error, "规则文件格式或版本不受支持。");
 });
+
+test("规则上游索引将相对文件地址解析到当前站点", () => {
+  const parsed = RuleEngine.parseRuleIndex({
+    format: "open-in-new-tab-rule-index",
+    version: 1,
+    title: "示例上游",
+    files: ["v2ex.json", "nested/other.json"]
+  }, "https://rules.example.com/community/index.json");
+
+  assert.equal(parsed.valid, true);
+  assert.deepEqual(parsed.value.files, [
+    "https://rules.example.com/community/v2ex.json",
+    "https://rules.example.com/community/nested/other.json"
+  ]);
+});
+
+test("规则上游不能引用未获授权的其他站点", () => {
+  const parsed = RuleEngine.parseRuleIndex({
+    format: "open-in-new-tab-rule-index",
+    version: 1,
+    files: ["https://other.example.com/rules.json"]
+  }, "https://rules.example.com/index.json");
+
+  assert.equal(parsed.valid, false);
+  assert.equal(parsed.error, "规则文件必须与规则上游位于同一站点。");
+});

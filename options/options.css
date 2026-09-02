@@ -40,6 +40,40 @@ button.danger { color: #b3261e; }
 
 .status { min-height: 24px; color: #137333; }
 
+.cloud-rules {
+  margin-bottom: 28px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+  border-radius: 12px;
+}
+.section-heading p { margin-bottom: 16px; color: GrayText; }
+.rule-source-form { padding: 0; }
+.rule-source-form > label { display: block; margin-bottom: 7px; font-weight: 600; }
+.rule-source-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 9px; }
+.rule-source-row input {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, CanvasText 30%, transparent);
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: Canvas;
+  color: CanvasText;
+}
+.rule-source-form > small { display: block; margin-top: 7px; }
+.rule-source-form .error { margin: 5px 0 0; }
+.cloud-rule-list { display: grid; gap: 10px; }
+.cloud-rule-list:empty { display: none; }
+.cloud-rule-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+  border-radius: 10px;
+}
+.cloud-rule-card h3 { margin: 0 0 5px; font-size: 16px; }
+.cloud-rule-card p { margin: 3px 0; color: GrayText; overflow-wrap: anywhere; }
+
 .rule-card {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -117,6 +151,9 @@ legend { margin-bottom: 9px; font-weight: 600; }
 @media (max-width: 680px) {
   main { width: min(100% - 24px, 900px); margin-top: 24px; }
   header { align-items: flex-start; }
+  .rule-source-row { grid-template-columns: 1fr; }
+  .cloud-rule-card { grid-template-columns: 1fr; }
+  .cloud-rule-card button { justify-self: start; }
   .rule-card { grid-template-columns: auto 1fr; }
   .rule-actions { grid-column: 2; }
 }

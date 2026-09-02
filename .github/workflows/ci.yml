@@ -25,7 +25,7 @@ jobs:
           node --check popup/popup.js
           node --check options/options.js
       - name: Run tests
-        run: node --test tests/rules.test.js
+        run: node --test tests/*.test.js
       - name: Build Chrome Web Store package
         shell: pwsh
         run: ./scripts/package.ps1
