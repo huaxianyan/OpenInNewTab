@@ -21,6 +21,7 @@
   const cloudRuleList = document.querySelector("#cloud-rule-list");
   let rules = [];
   let pendingImport;
+  let returnToCloudAfterImport = false;
 
   function setStatus(message) {
     status.textContent = message;
@@ -216,7 +217,7 @@
       view.textContent = "查看并选择";
       view.addEventListener("click", () => {
         cloudDialog.close();
-        renderImportPreview(item.ruleSet, cloudFileName(item.url));
+        renderImportPreview(item.ruleSet, cloudFileName(item.url), true);
       });
       card.append(content, view);
       cloudRuleList.append(card);
@@ -293,8 +294,9 @@
     }
   }
 
-  function renderImportPreview(ruleSet, fileName) {
+  function renderImportPreview(ruleSet, fileName, returnToCloud = false) {
     pendingImport = ruleSet;
+    returnToCloudAfterImport = returnToCloud;
     importSummary.replaceChildren();
     importRuleList.replaceChildren();
     importError.textContent = "";
@@ -350,6 +352,14 @@
     });
 
     importDialog.showModal();
+  }
+
+  function closeImportPreview() {
+    importDialog.close();
+    if (returnToCloudAfterImport && cloudRuleList.childElementCount) {
+      cloudDialog.showModal();
+    }
+    returnToCloudAfterImport = false;
   }
 
   function exportRules() {
@@ -466,7 +476,7 @@
       }
 
       await RuleStore.save(rules);
-      importDialog.close();
+      closeImportPreview();
       render();
       setStatus(`已导入 ${selected.length} 条规则，刷新目标页面后生效。`);
     });
@@ -487,8 +497,8 @@
   document.querySelector("#close-dialog").addEventListener("click", () => dialog.close());
   document.querySelector("#cancel-rule").addEventListener("click", () => dialog.close());
   document.querySelector("#close-cloud-dialog").addEventListener("click", () => cloudDialog.close());
-  document.querySelector("#close-import").addEventListener("click", () => importDialog.close());
-  document.querySelector("#cancel-import").addEventListener("click", () => importDialog.close());
+  document.querySelector("#close-import").addEventListener("click", closeImportPreview);
+  document.querySelector("#cancel-import").addEventListener("click", closeImportPreview);
 
   Promise.all([RuleStore.load(), RuleStore.loadRuleSource()]).then(([config, source]) => {
     rules = config.rules;
