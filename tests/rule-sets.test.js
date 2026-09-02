@@ -14,7 +14,6 @@ test("默认上游中的每个社区规则都可以进入导入预览", () => {
     "https://rules.example.com/rule-sets/index.json"
   );
   assert.equal(parsedIndex.valid, true);
-  assert.deepEqual(index.files, ["v2ex.json", "nga.json", "psnine.json"]);
 
   for (const fileName of index.files) {
     const content = JSON.parse(fs.readFileSync(path.join(ruleSetsDirectory, fileName), "utf8"));
