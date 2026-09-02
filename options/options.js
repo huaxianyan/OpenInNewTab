@@ -16,6 +16,8 @@
   const ruleSourceForm = document.querySelector("#rule-source-form");
   const ruleSourceUrl = document.querySelector("#rule-source-url");
   const ruleSourceError = document.querySelector("#rule-source-error");
+  const cloudDialog = document.querySelector("#cloud-dialog");
+  const cloudLoading = document.querySelector("#cloud-loading");
   const cloudRuleList = document.querySelector("#cloud-rule-list");
   let rules = [];
   let pendingImport;
@@ -213,6 +215,7 @@
       view.type = "button";
       view.textContent = "查看并选择";
       view.addEventListener("click", () => {
+        cloudDialog.close();
         renderImportPreview(item.ruleSet, cloudFileName(item.url));
       });
       card.append(content, view);
@@ -223,22 +226,34 @@
   async function loadCloudRules() {
     ruleSourceError.textContent = "";
     cloudRuleList.replaceChildren();
+    cloudLoading.hidden = false;
+    if (!cloudDialog.open) cloudDialog.showModal();
 
     let sourceUrl;
     try {
       sourceUrl = new URL(ruleSourceUrl.value.trim()).href;
     } catch {
+      cloudLoading.hidden = true;
       ruleSourceError.textContent = "请填写有效的规则上游地址。";
       return;
     }
     const permission = RuleEngine.ruleSourcePermissionPattern(sourceUrl);
     if (!permission) {
+      cloudLoading.hidden = true;
       ruleSourceError.textContent = "规则上游地址必须使用 HTTP 或 HTTPS。";
       return;
     }
 
-    const granted = await chrome.permissions.request({ origins: [permission] });
+    let granted = false;
+    try {
+      granted = await chrome.permissions.request({ origins: [permission] });
+    } catch {
+      cloudLoading.hidden = true;
+      ruleSourceError.textContent = "无法申请规则上游站点的访问权限，请重试。";
+      return;
+    }
     if (!granted) {
+      cloudLoading.hidden = true;
       ruleSourceError.textContent = "需要获得规则上游站点的访问权限才能读取规则。";
       return;
     }
@@ -263,6 +278,7 @@
           ruleSource: previousSource
         });
       }
+      cloudLoading.hidden = true;
       renderCloudRules(parsedIndex.value, ruleSets);
       setStatus(`已读取 ${ruleSets.length} 个云端规则集。`);
     } catch (error) {
@@ -270,6 +286,7 @@
         type: "release-rule-source-permission",
         ruleSource: sourceUrl
       });
+      cloudLoading.hidden = true;
       ruleSourceError.textContent = error instanceof SyntaxError
         ? "规则上游返回的内容不是有效的 JSON。"
         : `无法读取云端规则：${error.message || "请检查地址后重试。"}`;
@@ -469,6 +486,7 @@
   document.querySelector("#export-rules").addEventListener("click", exportRules);
   document.querySelector("#close-dialog").addEventListener("click", () => dialog.close());
   document.querySelector("#cancel-rule").addEventListener("click", () => dialog.close());
+  document.querySelector("#close-cloud-dialog").addEventListener("click", () => cloudDialog.close());
   document.querySelector("#close-import").addEventListener("click", () => importDialog.close());
   document.querySelector("#cancel-import").addEventListener("click", () => importDialog.close());
 

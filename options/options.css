@@ -59,8 +59,9 @@ button.danger { color: #b3261e; }
   color: CanvasText;
 }
 .rule-source-form > small { display: block; margin-top: 7px; }
-.rule-source-form .error { margin: 5px 0 0; }
-.cloud-rule-list { display: grid; gap: 10px; }
+.cloud-dialog-body { padding: 24px; }
+.cloud-loading { margin: 12px 0; color: GrayText; }
+.cloud-rule-list { display: grid; max-height: 520px; gap: 10px; overflow: auto; }
 .cloud-rule-list:empty { display: none; }
 .cloud-rule-card {
   display: grid;
@@ -105,6 +106,7 @@ dialog {
   background: Canvas;
   color: CanvasText;
 }
+#cloud-dialog { width: min(680px, calc(100% - 32px)); }
 form { padding: 24px; }
 .dialog-heading { display: flex; justify-content: space-between; align-items: center; }
 .icon-button { border: 0; padding: 2px 9px; font-size: 25px; }

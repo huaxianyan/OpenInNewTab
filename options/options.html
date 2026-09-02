@@ -38,9 +38,7 @@
           <button id="reset-rule-source" type="button">恢复默认</button>
         </div>
         <small>地址应指向规则索引 JSON。扩展只在你点击获取时访问这个地址。</small>
-        <p id="rule-source-error" class="error" role="alert"></p>
       </form>
-      <section id="cloud-rule-list" class="cloud-rule-list" aria-live="polite"></section>
     </section>
 
     <section id="rule-list" aria-label="规则列表"></section>
@@ -101,6 +99,18 @@
         <button class="primary" type="submit">保存并授权</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="cloud-dialog">
+    <div class="cloud-dialog-body">
+      <div class="dialog-heading">
+        <h2>选择云端规则</h2>
+        <button id="close-cloud-dialog" class="icon-button" type="button" aria-label="关闭">×</button>
+      </div>
+      <p id="cloud-loading" class="cloud-loading" role="status">正在读取规则上游…</p>
+      <p id="rule-source-error" class="error" role="alert"></p>
+      <section id="cloud-rule-list" class="cloud-rule-list" aria-live="polite"></section>
+    </div>
   </dialog>
 
   <dialog id="import-dialog">
