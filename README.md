@@ -149,4 +149,4 @@ rule-sets/               可选下载和导入的社区规则集
 
 ## 当前状态
 
-Manifest V3 `2.0.0` 已于 2026-09-01 提交 Chrome Web Store，当前正在审核。主分支正在开发 `2.1.0` 的可配置规则上游功能；`2.0.0` 发布包保持冻结。提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。
+Manifest V3 `2.0.0` 已通过 Chrome Web Store 审核。`2.1.0` 新增云端规则浏览和自定义规则来源，发布包已通过模块测试和 Edge 干净 Profile 自动验收，待完成官方 Chrome 最终验收后提交商店审核。更新内容见 [`docs/release-notes-2.1.0.md`](docs/release-notes-2.1.0.md)，提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。
