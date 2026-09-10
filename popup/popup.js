@@ -9,8 +9,11 @@
   const message = document.querySelector("#message");
   const pickButton = document.querySelector("#pick-links");
   const allButton = document.querySelector("#all-links");
+  const sitePermission = document.querySelector("#site-permission");
+  const grantSitePermission = document.querySelector("#grant-site-permission");
   let currentTab;
   let currentRules = [];
+  let missingRulePermissions = [];
   let pagePattern;
   let permissionPattern;
   let permissionPreviouslyGranted = false;
@@ -28,6 +31,7 @@
   function renderCurrentRules() {
     currentRuleList.replaceChildren();
     currentRulesSection.hidden = currentRules.length === 0;
+    sitePermission.hidden = missingRulePermissions.length === 0;
     const enabledCount = currentRules.filter((rule) => rule.enabled).length;
     ruleStatus.textContent = currentRules.length
       ? `当前网站有 ${currentRules.length} 条规则，已启用 ${enabledCount} 条`
@@ -169,6 +173,21 @@
     });
   }
 
+  grantSitePermission.addEventListener("click", () => {
+    chrome.permissions.request({ origins: missingRulePermissions }).then(async (granted) => {
+      if (!granted) {
+        setMessage("允许访问当前网站后，这里的规则才能使用。");
+        return;
+      }
+
+      missingRulePermissions = [];
+      permissionPreviouslyGranted = true;
+      sitePermission.hidden = true;
+      await chrome.runtime.sendMessage({ type: "activate-rules", tabId: currentTab.id });
+      setMessage("当前网站的规则已可使用。", false);
+    });
+  });
+
   allButton.addEventListener("click", () => runSiteAction("all-links"));
   pickButton.addEventListener("click", () => runSiteAction("pick-links"));
 
@@ -204,6 +223,16 @@
     currentRules = config.rules.filter((rule) => {
       return RuleEngine.matchesPage(rule.pagePattern, tab.url);
     });
+    const rulePermissions = [...new Set(currentRules.filter((rule) => rule.enabled).map((rule) => {
+      return RuleEngine.permissionPattern(rule.pagePattern);
+    }).filter(Boolean))];
+    const permissionStates = await Promise.all(rulePermissions.map(async (origin) => ({
+      origin,
+      granted: await chrome.permissions.contains({ origins: [origin] })
+    })));
+    missingRulePermissions = permissionStates
+      .filter((state) => !state.granted)
+      .map((state) => state.origin);
     renderCurrentRules();
     actions.hidden = false;
   }).catch(() => {

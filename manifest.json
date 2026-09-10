@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "新标签打开规则",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "按你设置的站点规则，在新标签中打开指定链接。",
   "minimum_chrome_version": "96",
   "icons": {
@@ -23,8 +23,10 @@
   },
   "permissions": [
     "activeTab",
+    "notifications",
     "scripting",
-    "storage"
+    "storage",
+    "webNavigation"
   ],
   "optional_host_permissions": [
     "*://*/*"

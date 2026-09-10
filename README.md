@@ -106,9 +106,11 @@ pwsh -File .\scripts\start-clean-test.ps1 -Reset
 扩展使用以下权限：
 
 - `activeTab`：用户点击扩展图标后，临时读取当前页面以启动可视化选择
+- `notifications`：访问已有规则但本机尚未授权的网站时显示提醒
 - `scripting`：在用户授权的网站中运行规则和可视化选择器
 - `storage`：保存并同步用户设置的规则
-- 可选网站权限：仅在用户为某个网站创建规则时申请
+- `webNavigation`：在本机判断顶层页面是否命中等待授权的规则
+- 可选网站权限：仅在用户创建、导入或启用对应网站规则时申请
 
 详情见 [隐私说明](PRIVACY.md)。
 
@@ -149,4 +151,4 @@ rule-sets/               可选下载和导入的社区规则集
 
 ## 当前状态
 
-Manifest V3 `2.0.0` 已通过 Chrome Web Store 审核。`2.1.0` 新增云端规则浏览和自定义规则来源，发布包已通过模块测试和 Edge 干净 Profile 自动验收，待完成官方 Chrome 最终验收后提交商店审核。更新内容见 [`docs/release-notes-2.1.0.md`](docs/release-notes-2.1.0.md)，提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。
+Manifest V3 `2.0.0` 已通过 Chrome Web Store 审核。`2.1.1` 在云端规则功能基础上补充跨设备同步后的授权流程，待完成发布验收后提交商店审核。更新内容见 [`docs/release-notes-2.1.1.md`](docs/release-notes-2.1.1.md)，提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。

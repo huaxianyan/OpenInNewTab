@@ -19,7 +19,11 @@
   const cloudDialog = document.querySelector("#cloud-dialog");
   const cloudLoading = document.querySelector("#cloud-loading");
   const cloudRuleList = document.querySelector("#cloud-rule-list");
+  const permissionSummary = document.querySelector("#permission-summary");
+  const permissionSiteCount = document.querySelector("#permission-site-count");
+  const grantAllPermissions = document.querySelector("#grant-all-permissions");
   let rules = [];
+  let permissionStates = new Map();
   let pendingImport;
   let returnToCloudAfterImport = false;
 
@@ -59,9 +63,31 @@
     dialog.showModal();
   }
 
+  function rulePermission(rule) {
+    return RuleEngine.permissionPattern(rule.pagePattern);
+  }
+
+  function missingPermissions() {
+    return [...new Set(rules.filter((rule) => rule.enabled).map(rulePermission).filter((origin) => {
+      return origin && !permissionStates.get(origin);
+    }))];
+  }
+
+  async function refreshPermissionStates() {
+    const origins = [...new Set(rules.map(rulePermission).filter(Boolean))];
+    permissionStates = new Map(await Promise.all(origins.map(async (origin) => {
+      const granted = await chrome.permissions.contains({ origins: [origin] });
+      return [origin, granted];
+    })));
+    render();
+  }
+
   function render() {
     list.replaceChildren();
     emptyState.hidden = rules.length !== 0;
+    const missing = missingPermissions();
+    permissionSummary.hidden = missing.length === 0;
+    permissionSiteCount.textContent = String(missing.length);
 
     for (const rule of rules) {
       const card = document.createElement("article");
@@ -84,6 +110,7 @@
           return;
         }
         rule.enabled = toggle.checked;
+        await refreshPermissionStates();
         setStatus(rule.enabled ? "规则已启用。" : "规则已停用。");
       });
 
@@ -108,12 +135,25 @@
       visualEdit.type = "button";
       visualEdit.textContent = "可视化编辑";
       visualEdit.addEventListener("click", () => openVisualEditor(rule));
+      const authorize = document.createElement("button");
+      authorize.type = "button";
+      const origin = rulePermission(rule);
+      const authorized = permissionStates.get(origin) === true;
+      authorize.textContent = authorized ? "已授权" : "授权网站";
+      authorize.disabled = authorized;
+      if (authorized) authorize.className = "authorized";
+      else authorize.addEventListener("click", () => {
+        chrome.permissions.request({ origins: [origin] }).then((granted) => {
+          if (granted) refreshPermissionStates();
+          else setStatus("允许访问这个网站后，这条规则才能使用。");
+        });
+      });
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "danger";
       remove.textContent = "删除";
       remove.addEventListener("click", () => deleteRule(rule));
-      actions.append(edit, visualEdit, remove);
+      actions.append(authorize, edit, visualEdit, remove);
 
       card.append(toggle, detail, actions);
       list.append(card);
@@ -161,7 +201,7 @@
     }
 
     rules = rules.filter((item) => item.id !== rule.id);
-    render();
+    await refreshPermissionStates();
     setStatus("规则已删除。");
   }
 
@@ -419,7 +459,7 @@
     }
 
     dialog.close();
-    render();
+    await refreshPermissionStates();
     setStatus("规则已保存，刷新目标页面后生效。");
   });
 
@@ -477,8 +517,16 @@
 
       await RuleStore.save(rules);
       closeImportPreview();
-      render();
+      await refreshPermissionStates();
       setStatus(`已导入 ${selected.length} 条规则，刷新目标页面后生效。`);
+    });
+  });
+
+  grantAllPermissions.addEventListener("click", () => {
+    const origins = missingPermissions();
+    chrome.permissions.request({ origins }).then((granted) => {
+      if (granted) refreshPermissionStates();
+      else setStatus("你可以稍后集中授权，或在对应规则上单独授权。");
     });
   });
 
@@ -503,6 +551,6 @@
   Promise.all([RuleStore.load(), RuleStore.loadRuleSource()]).then(([config, source]) => {
     rules = config.rules;
     ruleSourceUrl.value = source;
-    render();
+    refreshPermissionStates();
   });
 })();

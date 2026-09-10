@@ -20,6 +20,21 @@ Remove-Item -LiteralPath $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $ExtensionPath, $ProfilePath -Force | Out-Null
 $Manifest = Expand-ExtensionArchive -ArchivePath $ArchivePath -Destination $ExtensionPath
 
+$PortProbe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+$PortProbe.Start()
+$WebPort = ([System.Net.IPEndPoint]$PortProbe.LocalEndpoint).Port
+$PortProbe.Stop()
+$ServerScript = Join-Path $TestRoot "test-server.mjs"
+@"
+import { createServer } from "node:http";
+createServer((_request, response) => {
+  response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  response.end("<!doctype html><title>Permission notice test</title>");
+}).listen($WebPort, "127.0.0.1");
+"@ | Set-Content -LiteralPath $ServerScript -Encoding utf8
+$WebServerProcess = Start-Process node -ArgumentList $ServerScript -PassThru
+Start-Sleep -Milliseconds 300
+
 $BrowserProcess = Start-Process $Browser -ArgumentList @(
     "--headless=new"
     "--disable-gpu"
@@ -97,6 +112,44 @@ new Promise((resolve) => setTimeout(() => resolve({
         throw "设置页没有正常加载。"
     }
 
+    $NoticeOrigin = "http://127.0.0.1:$WebPort"
+    $MissingPermissionRuleExpression = @"
+(async () => {
+  await chrome.storage.sync.set({
+    ruleConfig: {
+      schemaVersion: 1,
+      rules: [{
+        id: "clean-profile-notice",
+        name: "待授权网站",
+        enabled: true,
+        pagePattern: "http://127.0.0.1/*",
+        linkSelector: "a[href]",
+        excludeSelector: "",
+        mode: "compatible"
+      }]
+    }
+  });
+  return true;
+})()
+"@
+    & node $Evaluator $Worker.webSocketDebuggerUrl $MissingPermissionRuleExpression | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "无法准备待授权规则。" }
+
+    $NoticeUrl = [Uri]::EscapeDataString("$NoticeOrigin/")
+    Invoke-RestMethod -Method Put "http://127.0.0.1:$Port/json/new?$NoticeUrl" | Out-Null
+    Start-Sleep -Milliseconds 500
+    $NoticeExpression = @"
+(async () => {
+  const stored = await chrome.storage.session.get("permissionNotices");
+  return stored.permissionNotices?.includes("$NoticeOrigin") || false;
+})()
+"@
+    $NoticeHandled = & node $Evaluator $Worker.webSocketDebuggerUrl $NoticeExpression |
+        ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0 -or -not $NoticeHandled) {
+        throw "访问待授权规则的网站时没有触发授权提醒。"
+    }
+
     Write-Host "干净 Profile 自动验收通过。"
     Write-Host "浏览器：$Browser"
     Write-Host "扩展 ID：$ExtensionId"
@@ -105,5 +158,8 @@ new Promise((resolve) => setTimeout(() => resolve({
     Write-Host "设置页：$($OptionsResult.heading)"
 } finally {
     Stop-TestBrowser -ProfilePath $ProfilePath
+    if ($WebServerProcess -and -not $WebServerProcess.HasExited) {
+        Stop-Process -Id $WebServerProcess.Id -Force -ErrorAction SilentlyContinue
+    }
     Remove-Item -LiteralPath $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

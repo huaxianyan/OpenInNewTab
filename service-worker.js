@@ -3,6 +3,8 @@ importScripts("rules.js", "storage.js");
 const CONTENT_SCRIPT_ID = "open-links-by-rule";
 const CONTENT_SCRIPT_FILES = ["rules.js", "storage.js", "main.js"];
 const PENDING_ACTION_KEY = "pendingSiteAction";
+const PERMISSION_NOTICE_KEY = "permissionNotices";
+const PERMISSION_NOTICE_PREFIX = "site-permission:";
 let reconciliation = Promise.resolve();
 let pendingActionWork = Promise.resolve();
 
@@ -64,6 +66,50 @@ chrome.permissions.onAdded.addListener(() => {
 chrome.permissions.onRemoved.addListener(scheduleReconciliation);
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "sync" && changes[RuleStore.STORAGE_KEY]) scheduleReconciliation();
+});
+
+async function notifyMissingSitePermission(details) {
+  if (details.frameId !== 0 || !details.url) return;
+
+  const config = await RuleStore.load();
+  const matchingRules = config.rules.filter((rule) => {
+    return rule.enabled && RuleEngine.validateRule(rule).valid &&
+      RuleEngine.matchesPage(rule.pagePattern, details.url);
+  });
+  if (!matchingRules.length) return;
+
+  const permissions = [...new Set(matchingRules.map((rule) => {
+    return RuleEngine.permissionPattern(rule.pagePattern);
+  }).filter(Boolean))];
+  const permissionStates = await Promise.all(permissions.map((permission) => {
+    return chrome.permissions.contains({ origins: [permission] });
+  }));
+  if (permissionStates.every(Boolean)) return;
+
+  const origin = new URL(details.url).origin;
+  const stored = await chrome.storage.session.get(PERMISSION_NOTICE_KEY);
+  const notified = new Set(stored[PERMISSION_NOTICE_KEY] || []);
+  if (notified.has(origin)) return;
+
+  notified.add(origin);
+  await chrome.storage.session.set({ [PERMISSION_NOTICE_KEY]: [...notified] });
+  await chrome.notifications.create(`${PERMISSION_NOTICE_PREFIX}${encodeURIComponent(origin)}`, {
+    type: "basic",
+    iconUrl: "icon128.png",
+    title: "此网站的规则需要授权",
+    message: `${new URL(details.url).hostname} 有 ${matchingRules.length} 条规则等待授权。点击这里前往设置。`,
+    priority: 1
+  });
+}
+
+chrome.webNavigation.onCommitted.addListener((details) => {
+  notifyMissingSitePermission(details).catch(() => {});
+});
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  if (!notificationId.startsWith(PERMISSION_NOTICE_PREFIX)) return;
+  chrome.notifications.clear(notificationId);
+  chrome.runtime.openOptionsPage();
 });
 
 async function activateRules(tabId) {

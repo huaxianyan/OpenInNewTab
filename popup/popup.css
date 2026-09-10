@@ -29,6 +29,16 @@ button strong, button span { display: block; }
 button span { margin-top: 3px; font-size: 12px; opacity: .8; }
 button:disabled { cursor: default; opacity: .55; }
 
+.permission-card {
+  margin: 0 0 14px;
+  padding: 13px;
+  border: 1px solid #b06000;
+  border-radius: 10px;
+  background: color-mix(in srgb, #b06000 9%, Canvas);
+}
+.permission-card p { margin: 5px 0 0; color: GrayText; }
+.permission-card button { width: 100%; text-align: center; }
+
 .current-rules { margin: 0 0 14px; border-top: 1px solid color-mix(in srgb, CanvasText 16%, transparent); }
 .rule-row { padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, CanvasText 16%, transparent); }
 .rule-heading { display: flex; align-items: center; gap: 8px; }
