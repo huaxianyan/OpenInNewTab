@@ -97,7 +97,11 @@ async function notifyMissingSitePermission(details) {
     type: "basic",
     iconUrl: "icon128.png",
     title: "此网站的规则需要授权",
-    message: `${new URL(details.url).hostname} 有 ${matchingRules.length} 条规则等待授权。点击这里前往设置。`,
+    message: `${new URL(details.url).hostname} 有 ${matchingRules.length} 条规则等待授权。`,
+    buttons: [
+      { title: "前往设置" },
+      { title: "关闭" }
+    ],
     priority: 1
   });
 }
@@ -106,10 +110,20 @@ chrome.webNavigation.onCommitted.addListener((details) => {
   notifyMissingSitePermission(details).catch(() => {});
 });
 
-chrome.notifications.onClicked.addListener((notificationId) => {
-  if (!notificationId.startsWith(PERMISSION_NOTICE_PREFIX)) return;
+function closePermissionNotice(notificationId) {
+  if (!notificationId.startsWith(PERMISSION_NOTICE_PREFIX)) return false;
   chrome.notifications.clear(notificationId);
+  return true;
+}
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  if (!closePermissionNotice(notificationId)) return;
   chrome.runtime.openOptionsPage();
+});
+
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  if (!closePermissionNotice(notificationId)) return;
+  if (buttonIndex === 0) chrome.runtime.openOptionsPage();
 });
 
 async function activateRules(tabId) {

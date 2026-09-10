@@ -151,4 +151,4 @@ rule-sets/               可选下载和导入的社区规则集
 
 ## 当前状态
 
-Manifest V3 `2.0.0` 已通过 Chrome Web Store 审核。`2.1.1` 在云端规则功能基础上补充跨设备同步后的授权流程，待完成发布验收后提交商店审核。更新内容见 [`docs/release-notes-2.1.1.md`](docs/release-notes-2.1.1.md)，提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。
+Manifest V3 `2.0.0` 已通过 Chrome Web Store 审核。`2.1.2` 新增云端规则和跨设备同步后的本机授权流程，已完成 Cent Browser 功能验收和 Edge 干净 Profile 自动验收，待使用官方 Chrome 做上架前最终确认。更新内容见 [`docs/release-notes-2.1.2.md`](docs/release-notes-2.1.2.md)，提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。
