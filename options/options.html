@@ -139,8 +139,39 @@
     </form>
   </dialog>
 
+  <dialog id="export-dialog">
+    <form id="export-form" method="dialog">
+      <div class="dialog-heading">
+        <h2>导出规则</h2>
+        <button id="close-export" class="icon-button" type="button" aria-label="关闭">×</button>
+      </div>
+
+      <fieldset>
+        <legend>导出方式</legend>
+        <label class="radio-row">
+          <input type="radio" name="export-mode" value="merged" checked>
+          <span><strong>导入用</strong><small>选中的规则合并成一个 JSON 文件，可以再次导入扩展。</small></span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="export-mode" value="community">
+          <span><strong>社区规则用</strong><small>按网站拆成多个规则文件并打包为 ZIP，可直接提交到 rule-sets/。</small></span>
+        </label>
+      </fieldset>
+
+      <p id="export-hint" class="export-hint"></p>
+      <div id="export-rule-list" class="import-rule-list"></div>
+      <p id="export-error" class="error" role="alert"></p>
+
+      <div class="dialog-actions">
+        <button id="cancel-export" type="button">取消</button>
+        <button class="primary" type="submit">导出</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="../rules.js"></script>
   <script src="../storage.js"></script>
+  <script src="../zip.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

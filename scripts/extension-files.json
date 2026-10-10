@@ -6,6 +6,7 @@
   "rules.js",
   "service-worker.js",
   "storage.js",
+  "zip.js",
   "options/options.css",
   "options/options.html",
   "options/options.js",

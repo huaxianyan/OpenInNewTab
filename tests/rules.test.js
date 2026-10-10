@@ -119,3 +119,34 @@ test("规则上游不能引用未获授权的其他站点", () => {
   assert.equal(parsed.valid, false);
   assert.equal(parsed.error, "规则文件必须与规则上游位于同一站点。");
 });
+
+test("站点文件名沿用仓库命名约定", () => {
+  assert.equal(RuleEngine.siteName("www.v2ex.com"), "v2ex");
+  assert.equal(RuleEngine.siteName("bbs.nga.cn"), "nga");
+  assert.equal(RuleEngine.siteName("psnine.com"), "psnine");
+});
+
+test("社区导出按站点分组并生成规则文件名", () => {
+  const rules = [
+    RuleEngine.normalizeRule({ name: "a", pagePattern: "https://www.v2ex.com/*", linkSelector: "a", mode: "compatible" }),
+    RuleEngine.normalizeRule({ name: "b", pagePattern: "https://www.v2ex.com/t/*", linkSelector: "b", mode: "force" }),
+    RuleEngine.normalizeRule({ name: "c", pagePattern: "https://psnine.com/*", linkSelector: "a", mode: "compatible" })
+  ];
+
+  const groups = RuleEngine.groupRulesByHost(rules);
+  assert.deepEqual([...groups.keys()], ["www.v2ex.com", "psnine.com"]);
+  assert.equal(groups.get("www.v2ex.com").length, 2);
+
+  const names = RuleEngine.ruleSetFileNames([...groups.keys()]);
+  assert.equal(names.get("www.v2ex.com"), "v2ex.json");
+  assert.equal(names.get("psnine.com"), "psnine.json");
+});
+
+test("同站不同子域导致重名时文件名不冲突", () => {
+  const names = RuleEngine.ruleSetFileNames(["www.example.com", "shop.example.com"]);
+  const values = [...names.values()];
+
+  assert.equal(values[0], "example.json");
+  assert.equal(new Set(values).size, 2);
+  assert.match(values[1], /^example-shop-example-com\.json$/);
+});

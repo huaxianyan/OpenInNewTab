@@ -151,8 +151,7 @@ legend { margin-bottom: 9px; font-weight: 600; }
 .error { min-height: 24px; color: #b3261e; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-.import-summary { margin: 8px 0 18px; }
-.import-summary h3 { margin: 0 0 6px; }
+.import-summary { margin: 8px 0 18px; }.import-summary h3 { margin: 0 0 6px; }
 .import-summary p { margin: 5px 0; color: GrayText; }
 .import-summary a { color: #0b57d0; }
 .import-rule-list { max-height: 420px; overflow: auto; border-block: 1px solid color-mix(in srgb, CanvasText 18%, transparent); }
@@ -162,6 +161,8 @@ legend { margin-bottom: 9px; font-weight: 600; }
 .import-rule strong, .import-rule small { display: block; }
 .import-rule small { margin-top: 3px; overflow-wrap: anywhere; }
 .import-rule .duplicate { color: #b06000; }
+
+.export-hint { margin: 14px 0 0; color: GrayText; overflow-wrap: anywhere; }
 
 @media (max-width: 680px) {
   .header-actions { justify-content: flex-start; }

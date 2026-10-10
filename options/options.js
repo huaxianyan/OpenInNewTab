@@ -13,6 +13,13 @@
   const importSummary = document.querySelector("#import-summary");
   const importRuleList = document.querySelector("#import-rule-list");
   const importError = document.querySelector("#import-error");
+  const exportDialog = document.querySelector("#export-dialog");
+  const exportForm = document.querySelector("#export-form");
+  const exportRuleList = document.querySelector("#export-rule-list");
+  const exportHint = document.querySelector("#export-hint");
+  const exportError = document.querySelector("#export-error");
+  const RULES_HOMEPAGE = "https://github.com/huaxianyan/OpenInNewTab";
+  const RULE_SETS_HOMEPAGE = "https://github.com/huaxianyan/OpenInNewTab/tree/main/rule-sets";
   const ruleSourceForm = document.querySelector("#rule-source-form");
   const ruleSourceUrl = document.querySelector("#rule-source-url");
   const ruleSourceError = document.querySelector("#rule-source-error");
@@ -402,27 +409,111 @@
     returnToCloudAfterImport = false;
   }
 
-  function exportRules() {
+  function download(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportMode() {
+    return exportForm.elements["export-mode"].value;
+  }
+
+  function selectedExportRules() {
+    return [...exportRuleList.querySelectorAll("input:checked")].map((checkbox) => {
+      return rules[Number(checkbox.dataset.index)];
+    });
+  }
+
+  function communityFiles(selected) {
+    const groups = RuleEngine.groupRulesByHost(selected);
+    const names = RuleEngine.ruleSetFileNames([...groups.keys()]);
+    const entries = [...groups].map(([host, hostRules]) => {
+      const ruleSet = RuleEngine.createRuleSet(hostRules, {
+        title: `${host} 规则`,
+        description: `在 ${host} 中使用新标签打开链接。`,
+        homepage: RULE_SETS_HOMEPAGE
+      });
+      return { name: names.get(host), content: `${JSON.stringify(ruleSet, null, 2)}\n` };
+    });
+    return entries;
+  }
+
+  function updateExportHint() {
+    const selected = selectedExportRules();
+    if (!selected.length) {
+      exportHint.textContent = "请至少选择一条规则。";
+      return;
+    }
+    if (exportMode() === "merged") {
+      exportHint.textContent = `将 ${selected.length} 条规则合并导出为 open-in-new-tab-rules.json。`;
+      return;
+    }
+    const entries = communityFiles(selected);
+    exportHint.textContent = `将按网站拆成 ${entries.length} 个文件并打包为 ZIP：${entries.map((entry) => entry.name).join("、")}`;
+  }
+
+  function openExportDialog() {
     if (!rules.length) {
       setStatus("当前没有可导出的规则。");
       return;
     }
 
-    const ruleSet = RuleEngine.createRuleSet(rules, {
-      title: "我的 OpenInNewTab 规则",
-      description: "从 OpenInNewTab 设置页导出的规则。",
-      homepage: "https://github.com/huaxianyan/OpenInNewTab"
+    exportError.textContent = "";
+    exportRuleList.replaceChildren();
+    rules.forEach((rule, index) => {
+      const row = document.createElement("label");
+      row.className = "import-rule";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = true;
+      checkbox.dataset.index = String(index);
+
+      const detail = document.createElement("span");
+      const name = document.createElement("strong");
+      name.textContent = rule.name;
+      const scope = document.createElement("small");
+      scope.textContent = rule.pagePattern;
+      const behavior = document.createElement("small");
+      behavior.textContent = rule.mode === "force" ? "阻止网站接管" : "保留网站交互";
+      detail.append(name, scope, behavior);
+
+      row.append(checkbox, detail);
+      exportRuleList.append(row);
     });
-    const blob = new Blob([`${JSON.stringify(ruleSet, null, 2)}\n`], {
-      type: "application/json"
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "open-in-new-tab-rules.json";
-    link.click();
-    URL.revokeObjectURL(url);
-    setStatus(`已导出 ${rules.length} 条规则。`);
+
+    exportForm.elements["export-mode"].value = "merged";
+    updateExportHint();
+    exportDialog.showModal();
+  }
+
+  function exportSelectedRules() {
+    const selected = selectedExportRules();
+    if (!selected.length) {
+      exportError.textContent = "请至少选择一条规则。";
+      return;
+    }
+
+    if (exportMode() === "merged") {
+      const ruleSet = RuleEngine.createRuleSet(selected, {
+        title: "我的 OpenInNewTab 规则",
+        description: "从 OpenInNewTab 设置页导出的规则。",
+        homepage: RULES_HOMEPAGE
+      });
+      download(new Blob([`${JSON.stringify(ruleSet, null, 2)}\n`], { type: "application/json" }),
+        "open-in-new-tab-rules.json");
+      exportDialog.close();
+      setStatus(`已导出 ${selected.length} 条规则。`);
+      return;
+    }
+
+    const entries = communityFiles(selected);
+    download(ZipWriter.create(entries), "open-in-new-tab-rule-sets.zip");
+    exportDialog.close();
+    setStatus(`已导出 ${entries.length} 个规则文件，共 ${selected.length} 条规则。`);
   }
 
   form.addEventListener("submit", async (event) => {
@@ -541,12 +632,19 @@
 
   document.querySelector("#add-rule").addEventListener("click", () => openDialog());
   document.querySelector("#import-rules").addEventListener("click", () => importFile.click());
-  document.querySelector("#export-rules").addEventListener("click", exportRules);
+  document.querySelector("#export-rules").addEventListener("click", openExportDialog);
   document.querySelector("#close-dialog").addEventListener("click", () => dialog.close());
   document.querySelector("#cancel-rule").addEventListener("click", () => dialog.close());
   document.querySelector("#close-cloud-dialog").addEventListener("click", () => cloudDialog.close());
   document.querySelector("#close-import").addEventListener("click", closeImportPreview);
   document.querySelector("#cancel-import").addEventListener("click", closeImportPreview);
+  document.querySelector("#close-export").addEventListener("click", () => exportDialog.close());
+  document.querySelector("#cancel-export").addEventListener("click", () => exportDialog.close());
+  exportForm.addEventListener("change", updateExportHint);
+  exportForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    exportSelectedRules();
+  });
 
   Promise.all([RuleStore.load(), RuleStore.loadRuleSource()]).then(([config, source]) => {
     rules = config.rules;

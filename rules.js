@@ -167,6 +167,50 @@
     return `${rule.pagePattern}\n${rule.linkSelector}`;
   }
 
+  // 由主机名推导社区规则文件名，与仓库 rule-sets/ 约定一致：
+  // www.v2ex.com -> v2ex，bbs.nga.cn -> nga，psnine.com -> psnine。
+  function siteName(host) {
+    const normalized = String(host || "").toLowerCase().replace(/^www\./, "");
+    const labels = normalized.split(".").filter(Boolean);
+    if (labels.length === 0) return "rules";
+    const isIpv4 = labels.length === 4 && labels.every((label) => /^\d+$/.test(label));
+    if (isIpv4) return normalized.replace(/\./g, "-");
+    if (labels.length >= 2) return labels[labels.length - 2];
+    return labels[0];
+  }
+
+  // 按站点（页面范围的授权来源）分组，用于「社区规则」导出。
+  function groupRulesByHost(rules) {
+    const groups = new Map();
+    for (const rule of rules) {
+      const permission = permissionPattern(rule.pagePattern);
+      let host = "local";
+      if (permission) {
+        try {
+          host = new URL(permission).host;
+        } catch {
+          host = "local";
+        }
+      }
+      if (!groups.has(host)) groups.set(host, []);
+      groups.get(host).push(rule);
+    }
+    return groups;
+  }
+
+  // 为分组生成唯一文件名，重名时追加主机名后缀。
+  function ruleSetFileNames(hosts) {
+    const used = new Set();
+    const names = new Map();
+    for (const host of hosts) {
+      let name = siteName(host);
+      if (used.has(name)) name = `${name}-${host.replace(/[^a-z0-9]+/gi, "-")}`;
+      used.add(name);
+      names.set(host, `${name}.json`);
+    }
+    return names;
+  }
+
   function splitSelectorList(selectorList) {
     const selectors = [];
     let current = "";
@@ -276,6 +320,7 @@
     RULE_SET_FORMAT,
     RULE_SET_VERSION,
     createRuleSet,
+    groupRulesByHost,
     matchesPage,
     normalizeRule,
     parsePattern,
@@ -283,7 +328,9 @@
     parseRuleSet,
     permissionPattern,
     ruleIdentity,
+    ruleSetFileNames,
     ruleSourcePermissionPattern,
+    siteName,
     splitSelectorList,
     validateRule
   });

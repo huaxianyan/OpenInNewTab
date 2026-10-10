@@ -55,7 +55,9 @@ pwsh -File .\scripts\start-clean-test.ps1 -Reset
 
 ## 导入和导出
 
-- [ ] 能导出当前全部规则
+- [ ] 「导出规则」打开选择窗口，可以勾选要导出的规则
+- [ ] 「导入用」模式导出一个合并的 JSON，可以再次导入扩展
+- [ ] 「社区规则用」模式按网站拆成多个文件并打包为 ZIP，解压后的文件可直接提交到 `rule-sets/`
 - [ ] `rule-sets/v2ex.json` 可以预览并导入
 - [ ] `rule-sets/nga.json` 可以预览并导入
 - [ ] `rule-sets/psnine.json` 可以预览并导入
