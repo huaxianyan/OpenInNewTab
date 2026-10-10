@@ -1,0 +1,71 @@
+name: Release
+
+# 推送 v* 标签时构建发布包并创建 GitHub Release。
+# 门禁、打包、干净 Profile 验收、正文拼装都在这里完成，本地不需要 PowerShell。
+# 也支持手动触发（workflow_dispatch）做干跑：除创建 Release 外全部执行。
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}".Substring(1)
+          } else {
+            $version = (Get-Content manifest.json -Raw | ConvertFrom-Json).version
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "版本：$version"
+
+      - name: Verify release notes
+        shell: pwsh
+        run: python scripts/verify_release_notes.py "docs/release-notes-${{ steps.version.outputs.version }}.md"
+
+      - name: Run tests
+        run: node --test tests/*.test.js
+
+      - name: Build Chrome Web Store package
+        shell: pwsh
+        run: ./scripts/package.ps1
+
+      - name: Test package in a clean Chromium profile
+        shell: pwsh
+        run: |
+          $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
+          if (-not (Test-Path $edge)) { throw "Microsoft Edge is not available on this runner." }
+          ./scripts/test-clean-package.ps1 -BrowserPath $edge
+
+      - name: Build release body
+        shell: pwsh
+        run: node scripts/build-release-body.mjs "${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            --title "${{ github.ref_name }}" `
+            --notes-file "build/release-body-${{ steps.version.outputs.version }}.md" `
+            "dist/OpenInNewTab-${{ steps.version.outputs.version }}.zip"
