@@ -21,11 +21,15 @@ jobs:
           node --check picker.js
           node --check rules.js
           node --check storage.js
+          node --check zip.js
           node --check service-worker.js
           node --check popup/popup.js
           node --check options/options.js
       - name: Run tests
         run: node --test tests/*.test.js
+      - name: Verify release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 scripts/verify_release_notes.py "docs/release-notes-${GITHUB_REF_NAME#v}.md"
       - name: Build Chrome Web Store package
         shell: pwsh
         run: ./scripts/package.ps1
