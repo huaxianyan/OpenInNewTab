@@ -44,6 +44,12 @@ function serializeIndex(index) {
   return `${JSON.stringify(index, null, 2)}\n`;
 }
 
+// index.json 是生成的产物，仓库里按 LF 存储；但 Windows 上 core.autocrlf=true
+// 会在检出时转成 CRLF。比较前统一行尾，否则 --check 会误报「不一致」。
+function normalizeNewlines(text) {
+  return String(text).replace(/\r\n/g, "\n");
+}
+
 // 逐个校验规则文件；任何一个不合法都会抛错，避免把坏文件写进索引。
 function validateRuleSetFiles(files = listRuleSetFiles()) {
   for (const fileName of files) {
@@ -62,7 +68,7 @@ function syncRuleIndex({ check = false } = {}) {
   const serialized = serializeIndex(buildIndex(existing));
   const current = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null;
 
-  if (current === serialized) {
+  if (current !== null && normalizeNewlines(current) === serialized) {
     return { changed: false, written: false, files };
   }
   if (check) {
@@ -83,6 +89,7 @@ module.exports = {
   buildIndex,
   indexPath,
   listRuleSetFiles,
+  normalizeNewlines,
   projectRoot,
   readJson,
   ruleSetsDirectory,

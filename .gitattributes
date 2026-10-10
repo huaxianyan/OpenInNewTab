@@ -1,0 +1,7 @@
+# rule-sets/index.json 由 scripts/sync-rule-index.mjs 生成，脚本会按字节比较它是否已同步。
+# 固定为 LF，避免 Windows 的 core.autocrlf 把检出结果变成 CRLF 后造成误报。
+rule-sets/index.json text eol=lf
+
+# 图片按二进制处理，不做行尾转换。
+*.png binary
+*.ico binary
