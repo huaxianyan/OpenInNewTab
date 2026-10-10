@@ -1,0 +1,17 @@
+{
+  "format": "open-in-new-tab-rules",
+  "version": 1,
+  "title": "Stage1st 论坛链接规则",
+  "description": "在 Stage1st 论坛使用新标签打开主题链接。",
+  "homepage": "https://github.com/huaxianyan/OpenInNewTab/tree/main/rule-sets",
+  "rules": [
+    {
+      "name": "stage1st.com 的选定链接",
+      "enabled": true,
+      "pagePattern": "https://stage1st.com/*",
+      "linkSelector": "a.s.xst",
+      "excludeSelector": "",
+      "mode": "force"
+    }
+  ]
+}

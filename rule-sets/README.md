@@ -7,6 +7,7 @@
 - [PSNINE](psnine.json)
 - [V2EX](v2ex.json)
 - [NGA](nga.json)
+- [Stage1st](stage1st.json)
 
 ## 使用
 
