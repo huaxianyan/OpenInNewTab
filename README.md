@@ -151,4 +151,4 @@ rule-sets/               可选下载和导入的社区规则集
 
 ## 当前状态
 
-Manifest V3 `2.0.0` 已通过 Chrome Web Store 审核。`2.1.2` 新增云端规则和跨设备同步后的本机授权流程，已完成 Cent Browser 功能验收和 Edge 干净 Profile 自动验收，待使用官方 Chrome 做上架前最终确认。更新内容见 [`docs/release-notes-2.1.2.md`](docs/release-notes-2.1.2.md)，提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。
+Manifest V3 `2.2.0` 已通过 Chrome Web Store 审核。本次把「导出规则」改为可勾选的导出窗口：先选择要导出的规则，再决定合并成单个 JSON 文件（用于导入）或按网站拆成多个规则文件打包为 ZIP（用于提交规则仓库）。权限、规则格式和同步行为与 `2.1.2` 相同，可以直接覆盖安装。更新内容见 [`docs/release-notes-2.2.0.md`](docs/release-notes-2.2.0.md)，提交文案、权限说明和发布清单见 [`docs/web-store-submission.md`](docs/web-store-submission.md)。
