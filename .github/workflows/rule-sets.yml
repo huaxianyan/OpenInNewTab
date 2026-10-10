@@ -1,0 +1,69 @@
+name: Rule sets
+
+# 社区贡献者只需要提交 rule-sets/<站点>.json，不用手工维护 index.json。
+# - PR：校验规则文件是否合法（不要求索引已同步）。
+# - 合并到 main：自动重新生成 rule-sets/index.json 并提交回去。
+
+on:
+  pull_request:
+    paths:
+      - "rule-sets/**"
+      - "scripts/rule-sets-lib.js"
+      - "scripts/sync-rule-index.mjs"
+      - ".github/workflows/rule-sets.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "rule-sets/**"
+      - "scripts/rule-sets-lib.js"
+      - "scripts/sync-rule-index.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: 校验规则文件
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 校验 rule-sets/ 下的规则文件
+        run: node scripts/sync-rule-index.mjs --validate
+      - name: 运行规则测试
+        run: node --test tests/rules.test.js tests/rule-sets.test.js
+      - name: 提示
+        run: echo "index.json 由合并后的机器人自动生成，无需手动修改。"
+
+  sync-index:
+    name: 生成规则索引
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 重新生成 rule-sets/index.json
+        run: node scripts/sync-rule-index.mjs
+      - name: 校验索引已同步
+        run: node scripts/sync-rule-index.mjs --check
+      - name: 运行全部测试
+        run: node --test tests/*.test.js
+      - name: 提交索引变更
+        run: |
+          if git diff --quiet -- rule-sets/index.json; then
+            echo "rule-sets/index.json 没有变化，无需提交。"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rule-sets/index.json
+          git commit -m "chore(rule-sets): 自动同步 index.json [skip ci]"
+          git push

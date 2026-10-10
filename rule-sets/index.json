@@ -4,8 +4,8 @@
   "title": "OpenInNewTab 社区规则",
   "description": "选择适合目标网站的规则集，导入前可以查看并取消不需要的规则。",
   "files": [
-    "v2ex.json",
     "nga.json",
-    "psnine.json"
+    "psnine.json",
+    "v2ex.json"
   ]
 }
